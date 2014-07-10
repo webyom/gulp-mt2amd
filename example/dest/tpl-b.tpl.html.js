@@ -6,7 +6,11 @@ define(function(require, exports, module) {
 		$data = $data || {};
 		var _$out_= [];
 		var $print = function(str) {_$out_.push(str);};
-		_$out_.push('<script type="text/javascript">alert(\'Hello\');</s', "", 'cript><style type="text/css">.menu { width: 200px;}</style>');
+		
+		with($data) {
+		_$out_.push('<script type="text/javascript">alert(\'Hello\');</s', "", 'cript><style type="text/css">.menu { width: 200px;}</style>', a, '', $encodeHtml(b), '');
+		}
+		
 		return _$out_.join('');
 	};
 });
