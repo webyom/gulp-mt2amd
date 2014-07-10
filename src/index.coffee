@@ -12,6 +12,16 @@ module.exports = ->
 		return @emit 'error', new gutil.PluginError('gulp-mt2amd', 'File can\'t be null') if file.isNull()
 		return @emit 'error', new gutil.PluginError('gulp-mt2amd', 'Streams not supported') if file.isStream()
 		module.exports.compile(file).then(
+			(file) =>
+				@push file
+				next()
+			(err) =>
+				@emit 'error', new gutil.PluginError('gulp-mt2amd', err)
+		).done()
+
+module.exports.compile = (file) ->
+	Q.Promise (resolve, reject) ->
+		compile(file).then(
 			(processed) =>
 				content = [
 					"define(function(require, exports, module) {"
@@ -39,13 +49,12 @@ module.exports = ->
 				].join(EOL).replace(/_\$out_\.push\(''\);/g, '')
 				file.contents = new Buffer content
 				file.path = file.path + '.js'
-				@push file
-				next()
+				resolve file
 			(err) =>
-				@emit 'error', new gutil.PluginError('gulp-mt2amd', err)
+				reject err
 		).done()
 
-module.exports.compile = (file, wrap) ->
+compile = (file, wrap) ->
 	Q.Promise (resolve, reject) ->
 		content = file.contents.toString 'utf-8'
 		asyncList = []
@@ -79,7 +88,7 @@ module.exports.compile = (file, wrap) ->
 								resolve incFile
 					)
 			else
-				asyncList.push module.exports.compile(incFile, true)
+				asyncList.push compile(incFile, true)
 			asyncMark
 		Q.all(asyncList).then(
 			(results) ->
