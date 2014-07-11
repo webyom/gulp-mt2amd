@@ -7,6 +7,65 @@ through = require 'through2'
 
 EOL = '\n'
 
+compileLess = (file) ->
+	Q.Promise (resolve, reject) ->
+		less.render(
+			file.contents.toString('utf-8')
+			{
+				paths: path.dirname file.path
+				strictMaths: false
+				strictUnits: false
+				filename: file.path
+			}
+			(err, css) ->
+				if err
+					reject err
+				else
+					file.contents = new Buffer [
+						'<style type="text/css">'
+						css
+						'</style>'
+					].join EOL
+					resolve file
+		)
+
+compile = (file, wrap) ->
+	Q.Promise (resolve, reject) ->
+		content = file.contents.toString 'utf-8'
+		asyncList = []
+		content = content.replace /<!--\s*include\s+(['"])([^'"]+)\.(tpl\.html|less)\1\s*-->/mg, (full, quote, incName, ext) ->
+			asyncMark = '<INC_PROCESS_ASYNC_MARK_' + asyncList.length + '>'
+			incFilePath = path.resolve path.dirname(file.path), incName + '.' + ext
+			incFile = new gutil.File
+				base: file.base
+				cwd: file.cwd
+				path: incFilePath
+				contents: fs.readFileSync incFilePath
+			if ext is 'less'
+				asyncList.push compileLess incFile
+			else
+				asyncList.push compile(incFile, true)
+			asyncMark
+		Q.all(asyncList).then(
+			(results) ->
+				results.forEach (incFile, i) ->
+					content = content.replace '<INC_PROCESS_ASYNC_MARK_' + i + '>', incFile.contents.toString 'utf8'
+				strict = (/(^|[^.]+)\B\$data\./).test content
+				content = [
+					content
+				]
+				if not strict
+					content.unshift '<%with($data) {%>'
+					content.push '<%}%>'
+				if wrap
+					content.unshift '<%;(function() {%>'
+					content.push '<%})();%>'
+				file.contents = new Buffer content.join EOL
+				resolve file
+			(err) ->
+				reject err
+		).done()
+
 module.exports = ->
 	through.obj (file, enc, next) ->
 		return @emit 'error', new gutil.PluginError('gulp-mt2amd', 'File can\'t be null') if file.isNull()
@@ -51,61 +110,5 @@ module.exports.compile = (file) ->
 				file.path = file.path + '.js'
 				resolve file
 			(err) =>
-				reject err
-		).done()
-
-compile = (file, wrap) ->
-	Q.Promise (resolve, reject) ->
-		content = file.contents.toString 'utf-8'
-		asyncList = []
-		content = content.replace /<!--\s*include\s+(['"])([^'"]+)\.(tpl\.html|less)\1\s*-->/mg, (full, quote, incName, ext) ->
-			asyncMark = '<INC_PROCESS_ASYNC_MARK_' + asyncList.length + '>'
-			incFilePath = path.resolve path.dirname(file.path), incName + '.' + ext
-			incFile = new gutil.File
-				base: file.base
-				cwd: file.cwd
-				path: incFilePath
-				contents: fs.readFileSync incFilePath
-			if ext is 'less'
-				asyncList.push Q.Promise (resolve, reject) ->
-					less.render(
-						incFile.contents.toString('utf-8')
-						{
-							paths: path.dirname incFilePath
-							strictMaths: false
-							strictUnits: false
-							filename: incFilePath
-						}
-						(err, css) ->
-							if err
-								reject err
-							else
-								incFile.contents = new Buffer [
-									'<style type="text/css">'
-									css
-									'</style>'
-								].join EOL
-								resolve incFile
-					)
-			else
-				asyncList.push compile(incFile, true)
-			asyncMark
-		Q.all(asyncList).then(
-			(results) ->
-				results.forEach (incFile, i) ->
-					content = content.replace '<INC_PROCESS_ASYNC_MARK_' + i + '>', incFile.contents.toString 'utf8'
-				strict = (/(^|[^.]+)\B\$data\./).test content
-				content = [
-					content
-				]
-				if not strict
-					content.unshift '<%with($data) {%>'
-					content.push '<%}%>'
-				if wrap
-					content.unshift '<%;(function() {%>'
-					content.push '<%})();%>'
-				file.contents = new Buffer content.join EOL
-				resolve file
-			(err) ->
 				reject err
 		).done()
