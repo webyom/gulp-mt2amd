@@ -10,7 +10,7 @@ gulp.task 'example', ->
 	mt2amd = require './lib/index'
 	through = require 'through2'
 	gulp.src('example/src/**/*.tpl.html')
-		.pipe mt2amd()
+		.pipe mt2amd beautify: true
 		.pipe gulp.dest('example/dest')
 
 gulp.task 'default', ['compile']

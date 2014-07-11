@@ -4,6 +4,7 @@ path = require 'path'
 less = require 'less'
 gutil = require 'gulp-util'
 through = require 'through2'
+uglify = require 'uglify-js'
 
 EOL = '\n'
 
@@ -66,11 +67,15 @@ compile = (file, wrap) ->
 				reject err
 		).done()
 
-module.exports = ->
+beautify = (content) ->
+	ast = uglify.parse content
+	content = ast.print_to_string beautify: true
+
+module.exports = (opt = {}) ->
 	through.obj (file, enc, next) ->
 		return @emit 'error', new gutil.PluginError('gulp-mt2amd', 'File can\'t be null') if file.isNull()
 		return @emit 'error', new gutil.PluginError('gulp-mt2amd', 'Streams not supported') if file.isStream()
-		module.exports.compile(file).then(
+		module.exports.compile(file, opt).then(
 			(file) =>
 				@push file
 				next()
@@ -78,7 +83,7 @@ module.exports = ->
 				@emit 'error', new gutil.PluginError('gulp-mt2amd', err)
 		).done()
 
-module.exports.compile = (file) ->
+module.exports.compile = (file, opt = {}) ->
 	Q.Promise (resolve, reject) ->
 		compile(file).then(
 			(processed) =>
@@ -106,6 +111,8 @@ module.exports.compile = (file) ->
 					"	};"
 					"});"
 				].join(EOL).replace(/_\$out_\.push\(''\);/g, '')
+				if opt.beautify
+					content = beautify content
 				file.contents = new Buffer content
 				file.path = file.path + '.js'
 				resolve file
