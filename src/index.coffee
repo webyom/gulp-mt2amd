@@ -54,7 +54,7 @@ compile = (file, wrap) ->
 			if ext is 'less'
 				asyncList.push compileLess incFile
 			else if ext is 'css'
-				asyncList.push compileLess incFile
+				asyncList.push compileCss incFile
 			else
 				asyncList.push compile(incFile, true)
 			asyncMark
