@@ -11,7 +11,7 @@ EOL = '\n'
 compileLess = (file) ->
 	Q.Promise (resolve, reject) ->
 		less.render(
-			file.contents.toString('utf-8')
+			file.contents.toString()
 			{
 				paths: path.dirname file.path
 				strictMaths: false
@@ -32,7 +32,7 @@ compileLess = (file) ->
 
 compile = (file, wrap) ->
 	Q.Promise (resolve, reject) ->
-		content = file.contents.toString 'utf-8'
+		content = file.contents.toString()
 		asyncList = []
 		content = content.replace /<!--\s*include\s+(['"])([^'"]+)\.(tpl\.html|less)\1\s*-->/mg, (full, quote, incName, ext) ->
 			asyncMark = '<INC_PROCESS_ASYNC_MARK_' + asyncList.length + '>'
@@ -50,7 +50,7 @@ compile = (file, wrap) ->
 		Q.all(asyncList).then(
 			(results) ->
 				results.forEach (incFile, i) ->
-					content = content.replace '<INC_PROCESS_ASYNC_MARK_' + i + '>', incFile.contents.toString 'utf8'
+					content = content.replace '<INC_PROCESS_ASYNC_MARK_' + i + '>', incFile.contents.toString()
 				strict = (/(^|[^.]+)\B\$data\./).test content
 				content = [
 					content
@@ -96,7 +96,7 @@ module.exports.compile = (file, opt = {}) ->
 					"		$data = $data || {};"
 					"		var _$out_= [];"
 					"		var $print = function(str) {_$out_.push(str);};"
-					"		_$out_.push('" + processed.contents.toString('utf8').replace /<\/script>/ig, '</s<%=""%>cript>'
+					"		_$out_.push('" + processed.contents.toString().replace /<\/script>/ig, '</s<%=""%>cript>'
 							.replace(/\r\n|\n|\r/g, "\v")
 							.replace(/(?:^|%>).*?(?:<%|$)/g, ($0) ->
 								$0.replace(/('|\\)/g, "\\$1").replace(/[\v\t]/g, "").replace(/\s+/g, " ")
