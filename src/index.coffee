@@ -53,7 +53,7 @@ compile = (file, wrap) ->
 				contents: fs.readFileSync incFilePath
 			if ext is 'less'
 				asyncList.push compileLess incFile
-			if ext is 'css'
+			else if ext is 'css'
 				asyncList.push compileLess incFile
 			else
 				asyncList.push compile(incFile, true)
