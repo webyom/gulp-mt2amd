@@ -30,11 +30,20 @@ compileLess = (file) ->
 					resolve file
 		)
 
+compileCss = (file) ->
+	Q.Promise (resolve, reject) ->
+		file.contents = new Buffer [
+			'<style type="text/css">'
+			file.contents.toString()
+			'</style>'
+		].join EOL
+		resolve file
+
 compile = (file, wrap) ->
 	Q.Promise (resolve, reject) ->
 		content = file.contents.toString()
 		asyncList = []
-		content = content.replace /<!--\s*include\s+(['"])([^'"]+)\.(tpl\.html|less)\1\s*-->/mg, (full, quote, incName, ext) ->
+		content = content.replace /<!--\s*include\s+(['"])([^'"]+)\.(tpl\.html|less|css)\1\s*-->/mg, (full, quote, incName, ext) ->
 			asyncMark = '<INC_PROCESS_ASYNC_MARK_' + asyncList.length + '>'
 			incFilePath = path.resolve path.dirname(file.path), incName + '.' + ext
 			incFile = new gutil.File
@@ -43,6 +52,8 @@ compile = (file, wrap) ->
 				path: incFilePath
 				contents: fs.readFileSync incFilePath
 			if ext is 'less'
+				asyncList.push compileLess incFile
+			if ext is 'css'
 				asyncList.push compileLess incFile
 			else
 				asyncList.push compile(incFile, true)

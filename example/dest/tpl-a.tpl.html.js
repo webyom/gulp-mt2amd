@@ -12,7 +12,13 @@ define(function(require, exports, module) {
             _$out_.push("<div>World</div>");
             (function() {
                 with ($data) {
-                    _$out_.push("<script type=\"text/javascript\">alert('Hello');</s", "", 'cript><style type="text/css">.menu { width: 200px;}</style>', a, "", $encodeHtml(b), "");
+                    _$out_.push("<script type=\"text/javascript\">alert('Hello');</s", "", "cript>");
+                    (function() {
+                        with ($data) {
+                            _$out_.push('<style type="text/css">.menu { width: 200px;}</style>');
+                        }
+                    })();
+                    _$out_.push('<style type="text/css">.menu { height: 30px;}</style>', a, "", $encodeHtml(b), "");
                 }
             })();
         }
