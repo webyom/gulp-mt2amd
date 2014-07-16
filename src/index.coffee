@@ -8,8 +8,12 @@ uglify = require 'uglify-js'
 
 EOL = '\n'
 
-compileLess = (file) ->
+compileLess = (file, opt) ->
 	Q.Promise (resolve, reject) ->
+		if opt.trace
+			trace = '<!-- trace:' + path.relative(process.cwd(), file.path) + ' -->' + EOL
+		else
+			trace = ''
 		less.render(
 			file.contents.toString()
 			{
@@ -23,23 +27,27 @@ compileLess = (file) ->
 					reject err
 				else
 					file.contents = new Buffer [
-						'<style type="text/css">'
+						trace + '<style type="text/css">'
 						css
 						'</style>'
 					].join EOL
 					resolve file
 		)
 
-compileCss = (file) ->
+compileCss = (file, opt) ->
 	Q.Promise (resolve, reject) ->
+		if opt.trace
+			trace = '<!-- trace:' + path.relative(process.cwd(), file.path) + ' -->' + EOL
+		else
+			trace = ''
 		file.contents = new Buffer [
-			'<style type="text/css">'
+			trace + '<style type="text/css">'
 			file.contents.toString()
 			'</style>'
 		].join EOL
 		resolve file
 
-compile = (file, wrap) ->
+compile = (file, opt, wrap) ->
 	Q.Promise (resolve, reject) ->
 		content = file.contents.toString()
 		asyncList = []
@@ -52,11 +60,11 @@ compile = (file, wrap) ->
 				path: incFilePath
 				contents: fs.readFileSync incFilePath
 			if ext is 'less'
-				asyncList.push compileLess incFile
+				asyncList.push compileLess(incFile, opt)
 			else if ext is 'css'
-				asyncList.push compileCss incFile
+				asyncList.push compileCss(incFile, opt)
 			else
-				asyncList.push compile(incFile, true)
+				asyncList.push compile(incFile, opt, true)
 			asyncMark
 		Q.all(asyncList).then(
 			(results) ->
@@ -96,7 +104,7 @@ module.exports = (opt = {}) ->
 
 module.exports.compile = (file, opt = {}) ->
 	Q.Promise (resolve, reject) ->
-		compile(file).then(
+		compile(file, opt).then(
 			(processed) =>
 				content = [
 					"define(function(require, exports, module) {"
