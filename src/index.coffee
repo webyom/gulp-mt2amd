@@ -11,7 +11,7 @@ EOL = '\n'
 compileLess = (file, opt) ->
 	Q.Promise (resolve, reject) ->
 		if opt.trace
-			trace = '<!-- trace:' + path.relative(process.cwd(), file.path) + ' -->' + EOL
+			trace = '<%/* trace:' + path.relative(process.cwd(), file.path) + ' */%>' + EOL
 		else
 			trace = ''
 		lessStream = less opt.lessOpt
@@ -30,7 +30,7 @@ compileLess = (file, opt) ->
 compileCss = (file, opt) ->
 	Q.Promise (resolve, reject) ->
 		if opt.trace
-			trace = '<!-- trace:' + path.relative(process.cwd(), file.path) + ' -->' + EOL
+			trace = '<%/* trace:' + path.relative(process.cwd(), file.path) + ' */%>' + EOL
 		else
 			trace = ''
 		file.contents = new Buffer [
@@ -64,8 +64,12 @@ compile = (file, opt, wrap) ->
 				results.forEach (incFile, i) ->
 					content = content.replace '<INC_PROCESS_ASYNC_MARK_' + i + '>', incFile.contents.toString()
 				strict = (/(^|[^.]+)\B\$data\./).test content
+				if opt.trace
+					trace = '<%/* trace:' + path.relative(process.cwd(), file.path) + ' */%>' + EOL
+				else
+					trace = ''
 				content = [
-					content
+					trace + content
 				]
 				if not strict
 					content.unshift '<%with($data) {%>'
@@ -83,6 +87,8 @@ beautify = (content, beautifyOpt) ->
 	if typeof beautifyOpt isnt 'object'
 		beautifyOpt = {}
 	beautifyOpt.beautify = true
+	beautifyOpt.comments = ->
+		true
 	ast = uglify.parse content
 	content = ast.print_to_string beautifyOpt
 
@@ -128,11 +134,6 @@ module.exports.compile = (file, opt = {}) ->
 				].join(EOL).replace(/_\$out_\.push\(''\);/g, '')
 				if opt.beautify
 					content = beautify content, opt.beautify
-				if opt.trace
-					trace = '/* trace:' + path.relative(process.cwd(), file.path) + ' */' + EOL
-				else
-					trace = ''
-				content = trace + content
 				file.contents = new Buffer content
 				file.path = file.path + '.js'
 				resolve file
