@@ -79,9 +79,12 @@ compile = (file, opt, wrap) ->
 				reject err
 		).done()
 
-beautify = (content) ->
+beautify = (content, beautifyOpt) ->
+	if typeof beautifyOpt isnt 'object'
+		beautifyOpt = {}
+	beautifyOpt.beautify = true
 	ast = uglify.parse content
-	content = ast.print_to_string beautify: true
+	content = ast.print_to_string beautifyOpt
 
 module.exports = (opt = {}) ->
 	through.obj (file, enc, next) ->
@@ -124,7 +127,12 @@ module.exports.compile = (file, opt = {}) ->
 					"});"
 				].join(EOL).replace(/_\$out_\.push\(''\);/g, '')
 				if opt.beautify
-					content = beautify content
+					content = beautify content, opt.beautify
+				if opt.trace
+					trace = '/* trace:' + path.relative(process.cwd(), file.path) + ' */' + EOL
+				else
+					trace = ''
+				content = trace + content
 				file.contents = new Buffer content
 				file.path = file.path + '.js'
 				resolve file

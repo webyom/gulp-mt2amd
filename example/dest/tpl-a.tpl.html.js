@@ -1,3 +1,4 @@
+/* trace:example/src/tpl-a.tpl.html */
 define(function(require, exports, module) {
     function $encodeHtml(str) {
         return (str + "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/`/g, "&#96;").replace(/'/g, "&#39;").replace(/"/g, "&quot;");
