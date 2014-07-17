@@ -1,7 +1,7 @@
 Q = require 'q'
 fs = require 'fs'
 path = require 'path'
-less = require 'less'
+less = require 'gulp-less'
 gutil = require 'gulp-util'
 through = require 'through2'
 uglify = require 'uglify-js'
@@ -14,25 +14,18 @@ compileLess = (file, opt) ->
 			trace = '<!-- trace:' + path.relative(process.cwd(), file.path) + ' -->' + EOL
 		else
 			trace = ''
-		less.render(
-			file.contents.toString()
-			{
-				paths: path.dirname file.path
-				strictMaths: false
-				strictUnits: false
-				filename: file.path
-			}
-			(err, css) ->
-				if err
-					reject err
-				else
-					file.contents = new Buffer [
-						trace + '<style type="text/css">'
-						css
-						'</style>'
-					].join EOL
-					resolve file
+		lessStream = less opt.lessOpt
+		lessStream.pipe through.obj(
+			(file, enc, next) ->
+				file.contents = new Buffer [
+					trace + '<style type="text/css">'
+						file.contents.toString()
+					'</style>'
+				].join EOL
+				resolve file
+				next()
 		)
+		lessStream.end file
 
 compileCss = (file, opt) ->
 	Q.Promise (resolve, reject) ->
