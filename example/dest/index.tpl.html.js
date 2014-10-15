@@ -21,6 +21,8 @@ define(function(require, exports, module) {
                             _$out_.push("<script type=\"text/javascript\">alert('Hello');</s", "", "cript>");
                             /* trace:example/src/style.less */
                             _$out_.push('<style type="text/css">.menu { width: 200px;}</style>');
+                            /* trace:example/src/style.scss */
+                            _$out_.push('<style type="text/css">.content-navigation { border-color: #3bbfce; color: #2ca2af; }.border { padding: 8px; margin: 8px; border-color: #3bbfce; }</style>');
                             /* trace:example/src/style.css */
                             _$out_.push('<style type="text/css">.menu {height: 30px;}</style>', a, "", $encodeHtml(b), "");
                         }

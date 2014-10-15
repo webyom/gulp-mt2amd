@@ -2,6 +2,7 @@ Q = require 'q'
 fs = require 'fs'
 path = require 'path'
 less = require 'gulp-less'
+sass = require 'gulp-sass'
 gutil = require 'gulp-util'
 through = require 'through2'
 uglify = require 'uglify-js'
@@ -27,6 +28,22 @@ compileLess = (file, opt) ->
 		)
 		lessStream.end file
 
+compileSass = (file, opt) ->
+	Q.Promise (resolve, reject) ->
+		if opt.trace
+			trace = '<%/* trace:' + path.relative(process.cwd(), file.path) + ' */%>' + EOL
+		else
+			trace = ''
+		sassStream = sass opt.sassOpt
+		sassStream.on 'data', (file) ->
+			file.contents = new Buffer [
+				trace + '<style type="text/css">'
+					file.contents.toString()
+				'</style>'
+			].join EOL
+			resolve file
+		sassStream.write file
+
 compileCss = (file, opt) ->
 	Q.Promise (resolve, reject) ->
 		if opt.trace
@@ -44,7 +61,7 @@ compile = (file, opt, wrap) ->
 	Q.Promise (resolve, reject) ->
 		content = file.contents.toString()
 		asyncList = []
-		content = content.replace /<!--\s*include\s+(['"])([^'"]+)\.(tpl\.html|less|css)\1\s*-->/mg, (full, quote, incName, ext) ->
+		content = content.replace /<!--\s*include\s+(['"])([^'"]+)\.(tpl\.html|less|scss|css)\1\s*-->/mg, (full, quote, incName, ext) ->
 			asyncMark = '<INC_PROCESS_ASYNC_MARK_' + asyncList.length + '>'
 			incFilePath = path.resolve path.dirname(file.path), incName + '.' + ext
 			incFile = new gutil.File
@@ -52,12 +69,14 @@ compile = (file, opt, wrap) ->
 				cwd: file.cwd
 				path: incFilePath
 				contents: fs.readFileSync incFilePath
+			if ext is 'tpl.html'
+				asyncList.push compile(incFile, opt, true)
 			if ext is 'less'
 				asyncList.push compileLess(incFile, opt)
-			else if ext is 'css'
+			if ext is 'scss'
+				asyncList.push compileSass(incFile, opt)
+			if ext is 'css'
 				asyncList.push compileCss(incFile, opt)
-			else
-				asyncList.push compile(incFile, opt, true)
 			asyncMark
 		Q.all(asyncList).then(
 			(results) ->
