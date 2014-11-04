@@ -26,6 +26,10 @@ compileLess = (file, opt) ->
 				resolve file
 				next()
 		)
+		lessStream.on 'error', (e) ->
+			console.log 'gulp-mt2amd Error:', e.message
+			console.log 'file:', file.path
+			console.log 'line:', e.line
 		lessStream.end file
 
 compileSass = (file, opt) ->
@@ -42,6 +46,9 @@ compileSass = (file, opt) ->
 				'</style>'
 			].join EOL
 			resolve file
+		sassStream.on 'error', (e) ->
+			console.log 'gulp-mt2amd Error:', e.message
+			console.log 'file:', file.path
 		sassStream.write file
 
 compileCss = (file, opt) ->
@@ -111,6 +118,19 @@ beautify = (content, beautifyOpt) ->
 	ast = uglify.parse content
 	content = ast.print_to_string beautifyOpt
 
+getErrorStack = (content, line) ->
+	startLine = Math.max 1, line - 2
+	maxLineNoLen = 0
+	content = content.split(/\n|\r\n|\r/).slice startLine - 1, line + 2
+	content.forEach (l, i) ->
+		lineNo = (startLine + i) + (if startLine + i is line then ' ->' else '   ') + '| '
+		maxLineNoLen = Math.max(maxLineNoLen, lineNo.length)
+		content[i] = lineNo + l
+	content.forEach (l, i) ->
+		if l.split('|')[0].length + 2 < maxLineNoLen
+			content[i] = ' ' + l
+	content.join EOL
+
 module.exports = (opt = {}) ->
 	through.obj (file, enc, next) ->
 		return @emit 'error', new gutil.PluginError('gulp-mt2amd', 'File can\'t be null') if file.isNull()
@@ -152,7 +172,12 @@ module.exports.compile = (file, opt = {}) ->
 					"});"
 				].join(EOL).replace(/_\$out_\.push\(''\);/g, '')
 				if opt.beautify
-					content = beautify content, opt.beautify
+					try
+						content = beautify content, opt.beautify
+					catch e
+						console.log 'gulp-mt2amd Error:', e.message
+						console.log 'file:', file.path
+						console.log getErrorStack(content, e.line)
 				file.contents = new Buffer content
 				file.path = file.path + '.js'
 				resolve file
