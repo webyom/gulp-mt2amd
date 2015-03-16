@@ -20,7 +20,7 @@ define(function(require, exports, module) {
                     /* trace:example/src/style.scss */
                     _$out_.push('<style type="text/css">.content-navigation { border-color: #3bbfce; color: #2ca2af; }.border { padding: 8px; margin: 8px; border-color: #3bbfce; }</style>');
                     /* trace:example/src/style.css */
-                    _$out_.push('<style type="text/css">.menu {height: 30px;}</style>', a, "", $encodeHtml(b), "");
+                    _$out_.push('<style type="text/css">.menu {width: 30px;}.menu {height: 30px;}</style>', a, "", $encodeHtml(b), "");
                 }
             })();
         }
