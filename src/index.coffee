@@ -6,8 +6,34 @@ sass = require 'gulp-sass'
 gutil = require 'gulp-util'
 through = require 'through2'
 uglify = require 'uglify-js'
+sus = require 'sus'
 
 EOL = '\n'
+
+htmlBase64img = (data, base, opt) ->
+	Q.Promise (resolve, reject) ->
+		if opt.base64img
+			data = data.replace /<img\s([^>]*)src="([^"]+)"/i, (full, extra, imgPath) ->
+				if imgPath.indexOf('.') is 0
+					'<img ' + extra + 'src="data:image/' + path.extname(imgPath).replace(/^\./, '') + ';base64,' + fs.readFileSync(path.resolve(base, imgPath), 'base64') + '"'
+				else
+					full
+			resolve data
+		else
+			resolve data
+
+cssBase64img = (data, base, opt) ->
+	Q.Promise (resolve, reject) ->
+		if opt.base64img
+			sus data,
+				base: base
+			.parse (err, parsed) ->
+				if err
+					reject err
+				else
+					resolve parsed.base() + EOL + parsed.sprites()
+		else
+			resolve data
 
 compileLess = (file, opt) ->
 	Q.Promise (resolve, reject) ->
@@ -18,13 +44,18 @@ compileLess = (file, opt) ->
 		lessStream = less opt.lessOpt
 		lessStream.pipe through.obj(
 			(file, enc, next) ->
-				file.contents = new Buffer [
-					trace + '<style type="text/css">'
-						file.contents.toString()
-					'</style>'
-				].join EOL
-				resolve file
-				next()
+				cssBase64img(file.contents.toString(), path.dirname(file.path), opt).then(
+					(content) ->
+						file.contents = new Buffer [
+							trace + '<style type="text/css">'
+								content
+							'</style>'
+						].join EOL
+						resolve file
+						next()
+					(err) ->
+						reject err
+				)
 		)
 		lessStream.on 'error', (e) ->
 			console.log 'gulp-mt2amd Error:', e.message
@@ -40,12 +71,17 @@ compileSass = (file, opt) ->
 			trace = ''
 		sassStream = sass opt.sassOpt
 		sassStream.on 'data', (file) ->
-			file.contents = new Buffer [
-				trace + '<style type="text/css">'
-					file.contents.toString()
-				'</style>'
-			].join EOL
-			resolve file
+			cssBase64img(file.contents.toString(), path.dirname(file.path), opt).then(
+				(content) ->
+					file.contents = new Buffer [
+						trace + '<style type="text/css">'
+							content
+						'</style>'
+					].join EOL
+					resolve file
+				(err) ->
+					reject err
+			)
 		sassStream.on 'error', (e) ->
 			console.log 'gulp-mt2amd Error:', e.message
 			console.log 'file:', file.path
@@ -57,12 +93,18 @@ compileCss = (file, opt) ->
 			trace = '<%/* trace:' + path.relative(process.cwd(), file.path) + ' */%>' + EOL
 		else
 			trace = ''
-		file.contents = new Buffer [
-			trace + '<style type="text/css">'
-			if opt.postcss then opt.postcss(file) else file.contents.toString()
-			'</style>'
-		].join EOL
-		resolve file
+		content = if opt.postcss then opt.postcss(file) else file.contents.toString()
+		cssBase64img(content, path.dirname(file.path), opt).then(
+			(content) ->
+				file.contents = new Buffer [
+					trace + '<style type="text/css">'
+						content
+					'</style>'
+				].join EOL
+				resolve file
+			(err) ->
+				reject err
+		)
 
 compile = (file, opt, wrap) ->
 	Q.Promise (resolve, reject) ->
@@ -87,24 +129,29 @@ compile = (file, opt, wrap) ->
 			asyncMark
 		Q.all(asyncList).then(
 			(results) ->
-				results.forEach (incFile, i) ->
-					content = content.replace '<INC_PROCESS_ASYNC_MARK_' + i + '>', incFile.contents.toString()
-				strict = (/(^|[^.]+)\B\$data\./).test content
-				if opt.trace
-					trace = '<%/* trace:' + path.relative(process.cwd(), file.path) + ' */%>' + EOL
-				else
-					trace = ''
-				content = [
-					trace + content
-				]
-				if not strict
-					content.unshift '<%with($data) {%>'
-					content.push '<%}%>'
-				if wrap
-					content.unshift '<%;(function() {%>'
-					content.push '<%})();%>'
-				file.contents = new Buffer content.join EOL
-				resolve file
+				htmlBase64img(content, path.dirname(file.path), opt).then(
+					(content) ->
+						results.forEach (incFile, i) ->
+							content = content.replace '<INC_PROCESS_ASYNC_MARK_' + i + '>', incFile.contents.toString()
+						strict = (/(^|[^.]+)\B\$data\./).test content
+						if opt.trace
+							trace = '<%/* trace:' + path.relative(process.cwd(), file.path) + ' */%>' + EOL
+						else
+							trace = ''
+						content = [
+							trace + content
+						]
+						if not strict
+							content.unshift '<%with($data) {%>'
+							content.push '<%}%>'
+						if wrap
+							content.unshift '<%;(function() {%>'
+							content.push '<%})();%>'
+						file.contents = new Buffer content.join EOL
+						resolve file
+					(err) ->
+						reject err
+				)
 			(err) ->
 				reject err
 		).done()
