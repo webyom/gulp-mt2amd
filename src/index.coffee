@@ -51,6 +51,7 @@ compileLess = (file, opt) ->
 								content
 							'</style>'
 						].join EOL
+						file._cssContents = new Buffer content
 						resolve file
 						next()
 					(err) ->
@@ -78,6 +79,7 @@ compileSass = (file, opt) ->
 							content
 						'</style>'
 					].join EOL
+					file._cssContents = new Buffer content
 					resolve file
 				(err) ->
 					reject err
@@ -101,6 +103,7 @@ compileCss = (file, opt) ->
 						content
 					'</style>'
 				].join EOL
+				file._cssContents = new Buffer content
 				resolve file
 			(err) ->
 				reject err
@@ -192,42 +195,80 @@ module.exports = (opt = {}) ->
 
 module.exports.compile = (file, opt = {}) ->
 	Q.Promise (resolve, reject) ->
-		compile(file, opt).then(
-			(processed) =>
-				content = [
-					"define(function(require, exports, module) {"
-					"	function $encodeHtml(str) {"
-					"		return (str + '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\x60/g, '&#96;').replace(/\x27/g, '&#39;').replace(/\x22/g, '&quot;');"
-					"	}"
-					"	exports.render = function($data, $opt) {"
-					"		$data = $data || {};"
-					"		var _$out_= [];"
-					"		var $print = function(str) {_$out_.push(str);};"
-					"		_$out_.push('" + processed.contents.toString().replace /<\/script>/ig, '</s<%=""%>cript>'
-							.replace(/\r\n|\n|\r/g, "\v")
-							.replace(/(?:^|%>).*?(?:<%|$)/g, ($0) ->
-								$0.replace(/('|\\)/g, "\\$1").replace(/[\v\t]/g, "").replace(/\s+/g, " ")
-							)
-							.replace(/[\v]/g, EOL)
-							.replace(/<%==(.*?)%>/g, "', $encodeHtml($1), '")
-							.replace(/<%=(.*?)%>/g, "', $1, '")
-							.replace(/<%(<-)?/g, "');" + EOL + "		")
-							.replace(/->(\w+)%>/g, EOL + "		$1.push('")
-							.split("%>").join(EOL + "		_$out_.push('") + "');"
-					"		return _$out_.join('');"
-					"	};"
-					"});"
-				].join(EOL).replace(/_\$out_\.push\(''\);/g, '')
-				if opt.beautify
-					try
-						content = beautify content, opt.beautify
-					catch e
-						console.log 'gulp-mt2amd Error:', e.message
-						console.log 'file:', file.path
-						console.log getErrorStack(content, e.line)
-				file.contents = new Buffer content
-				file.path = file.path + '.js'
-				resolve file
-			(err) =>
-				reject err
-		).done()
+		originFilePath = file.path
+		extName = path.extname originFilePath
+		if extName in ['.less', '.scss', '.css']
+			if extName is '.less'
+				cssCompiler = compileLess
+			else if extName is '.scss'
+				cssCompiler = compileSass
+			else
+				cssCompiler = compileCss
+			cssCompiler(file, opt).then(
+				(file) ->
+					if opt.trace
+						trace = '/* trace:' + path.relative(process.cwd(), originFilePath) + ' */' + EOL
+					else
+						trace = ''
+					content = [
+						"define(function(require, exports, module) {"
+						"	exports.render = function() {"
+						"		var _$out_= [];"
+						trace + "		_$out_.push('" + file._cssContents.toString().replace(/\r\n|\n|\r/g, '').replace(/\s+/g, ' ') + "');"
+						"		return _$out_.join('');"
+						"	};"
+						"});"
+					].join(EOL)
+					if opt.beautify
+						try
+							content = beautify content, opt.beautify
+						catch e
+							console.log 'gulp-mt2amd Error:', e.message
+							console.log 'file:', file.path
+							console.log getErrorStack(content, e.line)
+					file.contents = new Buffer content
+					file.path = originFilePath + '.js'
+					resolve file
+				(err) ->
+					reject err
+			).done()
+		else
+			compile(file, opt).then(
+				(processed) =>
+					content = [
+						"define(function(require, exports, module) {"
+						"	function $encodeHtml(str) {"
+						"		return (str + '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\x60/g, '&#96;').replace(/\x27/g, '&#39;').replace(/\x22/g, '&quot;');"
+						"	}"
+						"	exports.render = function($data, $opt) {"
+						"		$data = $data || {};"
+						"		var _$out_= [];"
+						"		var $print = function(str) {_$out_.push(str);};"
+						"		_$out_.push('" + processed.contents.toString().replace /<\/script>/ig, '</s<%=""%>cript>'
+								.replace(/\r\n|\n|\r/g, "\v")
+								.replace(/(?:^|%>).*?(?:<%|$)/g, ($0) ->
+									$0.replace(/('|\\)/g, "\\$1").replace(/[\v\t]/g, "").replace(/\s+/g, " ")
+								)
+								.replace(/[\v]/g, EOL)
+								.replace(/<%==(.*?)%>/g, "', $encodeHtml($1), '")
+								.replace(/<%=(.*?)%>/g, "', $1, '")
+								.replace(/<%(<-)?/g, "');" + EOL + "		")
+								.replace(/->(\w+)%>/g, EOL + "		$1.push('")
+								.split("%>").join(EOL + "		_$out_.push('") + "');"
+						"		return _$out_.join('');"
+						"	};"
+						"});"
+					].join(EOL).replace(/_\$out_\.push\(''\);/g, '')
+					if opt.beautify
+						try
+							content = beautify content, opt.beautify
+						catch e
+							console.log 'gulp-mt2amd Error:', e.message
+							console.log 'file:', file.path
+							console.log getErrorStack(content, e.line)
+					file.contents = new Buffer content
+					file.path = file.path + '.js'
+					resolve file
+				(err) =>
+					reject err
+			).done()
