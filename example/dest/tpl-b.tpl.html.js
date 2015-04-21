@@ -10,7 +10,7 @@ define(function(require, exports, module) {
         };
         with ($data) {
             /* trace:example/src/tpl-b.tpl.html */
-            _$out_.push("<script type=\"text/javascript\">alert('Hello');</s", "", "cript>");
+            _$out_.push("<script type=\"text/javascript\">alert('Hello');</s", "", 'cript><img src="./arrow.png?" />');
             /* trace:example/src/style.less */
             _$out_.push('<style type="text/css">.menu { width: 200px; background-image: url(arrow.png?)}</style>');
             /* trace:example/src/style.scss */

@@ -14,7 +14,7 @@ htmlBase64img = (data, base, opt) ->
 	Q.Promise (resolve, reject) ->
 		if opt.generateDataUri
 			data = data.replace /<img\s([^>]*)src="([^"]+)"/ig, (full, extra, imgPath) ->
-				if imgPath.indexOf('//') is -1 and imgPath.indexOf('?') is -1
+				if not (/^data:|\/\//i).test(imgPath) and imgPath.indexOf('?') is -1
 					'<img ' + extra + 'src="data:image/' + path.extname(imgPath).replace(/^\./, '') + ';base64,' + fs.readFileSync(path.resolve(base, imgPath), 'base64') + '"'
 				else
 					full
