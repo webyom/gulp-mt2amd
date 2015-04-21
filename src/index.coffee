@@ -12,9 +12,9 @@ EOL = '\n'
 
 htmlBase64img = (data, base, opt) ->
 	Q.Promise (resolve, reject) ->
-		if opt.base64img
+		if opt.generateDataUri
 			data = data.replace /<img\s([^>]*)src="([^"]+)"/ig, (full, extra, imgPath) ->
-				if imgPath.indexOf('.') is 0
+				if imgPath.indexOf('//') is -1 and imgPath.indexOf('?') is -1
 					'<img ' + extra + 'src="data:image/' + path.extname(imgPath).replace(/^\./, '') + ';base64,' + fs.readFileSync(path.resolve(base, imgPath), 'base64') + '"'
 				else
 					full
@@ -24,7 +24,7 @@ htmlBase64img = (data, base, opt) ->
 
 cssBase64img = (data, base, opt) ->
 	Q.Promise (resolve, reject) ->
-		if opt.base64img
+		if opt.generateDataUri
 			sus data,
 				base: base
 			.parse (err, parsed) ->

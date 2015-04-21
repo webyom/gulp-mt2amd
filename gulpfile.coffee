@@ -13,7 +13,7 @@ gulp.task 'example', ->
 	mt2amd = require './lib/index'
 	gulp.src(['example/src/**/*.tpl.html', 'example/src/**/*.css', 'example/src/**/*.less', 'example/src/**/*.scss'])
 		.pipe mt2amd
-			base64img: true
+			generateDataUri: true
 			beautify: true
 			trace: true
 			postcss: (file, type) ->
