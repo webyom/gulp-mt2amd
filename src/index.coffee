@@ -57,7 +57,7 @@ compileLess = (file, opt) ->
 						next()
 					(err) ->
 						reject err
-				)
+				).done()
 		)
 		lessStream.on 'error', (e) ->
 			console.log 'gulp-mt2amd Error:', e.message
@@ -85,7 +85,7 @@ compileSass = (file, opt) ->
 					resolve file
 				(err) ->
 					reject err
-			)
+			).done()
 		sassStream.on 'error', (e) ->
 			console.log 'gulp-mt2amd Error:', e.message
 			console.log 'file:', file.path
@@ -109,7 +109,7 @@ compileCss = (file, opt) ->
 				resolve file
 			(err) ->
 				reject err
-		)
+		).done()
 
 compile = (file, opt, wrap) ->
 	Q.Promise (resolve, reject) ->
@@ -138,7 +138,7 @@ compile = (file, opt, wrap) ->
 					(content) ->
 						results.forEach (incFile, i) ->
 							content = content.replace '<INC_PROCESS_ASYNC_MARK_' + i + '>', incFile.contents.toString()
-						strict = (/(^|[^.]+)\B\$data\./).test content
+						strict = (/(^|[^.])\B\$data\./).test content
 						if opt.trace
 							trace = '<%/* trace:' + path.relative(process.cwd(), file.path) + ' */%>' + EOL
 						else
@@ -156,7 +156,7 @@ compile = (file, opt, wrap) ->
 						resolve file
 					(err) ->
 						reject err
-				)
+				).done()
 			(err) ->
 				reject err
 		).done()
