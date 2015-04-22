@@ -1,3 +1,4 @@
+_ = require 'lodash'
 Q = require 'q'
 fs = require 'fs'
 path = require 'path'
@@ -7,6 +8,7 @@ gutil = require 'gulp-util'
 through = require 'through2'
 uglify = require 'uglify-js'
 sus = require 'sus'
+riot = require 'riot'
 
 EOL = '\n'
 
@@ -38,9 +40,10 @@ cssBase64img = (data, base, opt) ->
 compileLess = (file, opt) ->
 	Q.Promise (resolve, reject) ->
 		if opt.trace
-			trace = '<%/* trace:' + path.relative(process.cwd(), file.path) + ' */%>' + EOL
+			trace = '/* trace:' + path.relative(process.cwd(), file.path) + ' */' + EOL
 		else
 			trace = ''
+		file._originalPath = file.path
 		lessStream = less opt.lessOpt
 		lessStream.pipe through.obj(
 			(file, enc, next) ->
@@ -48,7 +51,7 @@ compileLess = (file, opt) ->
 				cssBase64img(content, path.dirname(file.path), opt).then(
 					(content) ->
 						file.contents = new Buffer [
-							trace + '<style type="text/css">'
+							'<style type="text/css">'
 								content
 							'</style>'
 						].join EOL
@@ -68,16 +71,17 @@ compileLess = (file, opt) ->
 compileSass = (file, opt) ->
 	Q.Promise (resolve, reject) ->
 		if opt.trace
-			trace = '<%/* trace:' + path.relative(process.cwd(), file.path) + ' */%>' + EOL
+			trace = '/* trace:' + path.relative(process.cwd(), file.path) + ' */' + EOL
 		else
 			trace = ''
+		file._originalPath = file.path
 		sassStream = sass opt.sassOpt
 		sassStream.on 'data', (file) ->
 			content = if opt.postcss then opt.postcss(file, 'scss') else file.contents.toString()
 			cssBase64img(content, path.dirname(file.path), opt).then(
 				(content) ->
 					file.contents = new Buffer [
-						trace + '<style type="text/css">'
+						'<style type="text/css">'
 							content
 						'</style>'
 					].join EOL
@@ -94,19 +98,64 @@ compileSass = (file, opt) ->
 compileCss = (file, opt) ->
 	Q.Promise (resolve, reject) ->
 		if opt.trace
-			trace = '<%/* trace:' + path.relative(process.cwd(), file.path) + ' */%>' + EOL
+			trace = '/* trace:' + path.relative(process.cwd(), file.path) + ' */' + EOL
 		else
 			trace = ''
+		file._originalPath = file.path
 		content = if opt.postcss then opt.postcss(file, 'css') else file.contents.toString()
 		cssBase64img(content, path.dirname(file.path), opt).then(
 			(content) ->
 				file.contents = new Buffer [
-					trace + '<style type="text/css">'
+					'<style type="text/css">'
 						content
 					'</style>'
 				].join EOL
 				file._cssContents = new Buffer content
 				resolve file
+			(err) ->
+				reject err
+		).done()
+
+compileRiot = (file, opt) ->
+	Q.Promise (resolve, reject) ->
+		content = file.contents.toString()
+		asyncList = []
+		content = content.replace /<!--\s*include\s+(['"])([^'"]+)\.(less|scss|css)\1\s*-->/mg, (full, quote, incName, ext) ->
+			asyncMark = '<INC_PROCESS_ASYNC_MARK_' + asyncList.length + '>'
+			incFilePath = path.resolve path.dirname(file.path), incName + '.' + ext
+			incFile = new gutil.File
+				base: file.base
+				cwd: file.cwd
+				path: incFilePath
+				contents: fs.readFileSync incFilePath
+			if ext is 'less'
+				asyncList.push compileLess(incFile, _.extend({}, opt, {_riot: true}))
+			if ext is 'scss'
+				asyncList.push compileSass(incFile, _.extend({}, opt, {_riot: true}))
+			if ext is 'css'
+				asyncList.push compileCss(incFile, _.extend({}, opt, {_riot: true}))
+			asyncMark
+		Q.all(asyncList).then(
+			(results) ->
+				htmlBase64img(content, path.dirname(file.path), opt).then(
+					(content) ->
+						results.forEach (incFile, i) ->
+							incContent = incFile.contents.toString()
+							if opt.trace
+								trace = '/* trace:' + path.relative(process.cwd(), incFile._originalPath || incFile.path) + ' */' + EOL
+							else
+								trace = ''
+							content = trace + content.replace '<INC_PROCESS_ASYNC_MARK_' + i + '>', incContent
+						riotOpt = _.extend {}, opt.riotOpt, expr: true
+						m = content.match /(?:^|\r\n|\n|\r)\/\*\*\s*@riot\s+(coffeescript|es6)/
+						if m
+							riotOpt.type = m[1]
+						content = riot.compile content, riotOpt
+						file.contents = new Buffer content
+						resolve file
+					(err) ->
+						reject err
+				).done()
 			(err) ->
 				reject err
 		).done()
@@ -137,7 +186,12 @@ compile = (file, opt, wrap) ->
 				htmlBase64img(content, path.dirname(file.path), opt).then(
 					(content) ->
 						results.forEach (incFile, i) ->
-							content = content.replace '<INC_PROCESS_ASYNC_MARK_' + i + '>', incFile.contents.toString()
+							incContent = incFile.contents.toString()
+							if opt.trace
+								trace = '<%/* trace:' + path.relative(process.cwd(), incFile._originalPath || incFile.path) + ' */%>' + EOL
+							else
+								trace = ''
+							content = content.replace '<INC_PROCESS_ASYNC_MARK_' + i + '>', trace + incContent
 						strict = (/(^|[^.])\B\$data\./).test content
 						if opt.trace
 							trace = '<%/* trace:' + path.relative(process.cwd(), file.path) + ' */%>' + EOL
@@ -199,7 +253,33 @@ module.exports.compile = (file, opt = {}) ->
 	Q.Promise (resolve, reject) ->
 		originFilePath = file.path
 		extName = path.extname originFilePath
-		if extName in ['.less', '.scss', '.css']
+		if (/(\.riot\.html|\.tag)$/).test originFilePath
+			compileRiot(file, opt).then(
+				(file) ->
+					if opt.trace
+						trace = '/* trace:' + path.relative(process.cwd(), originFilePath) + ' */' + EOL
+					else
+						trace = ''
+					content = [
+						trace
+						"define(function(require, exports, module) {"
+						file.contents.toString()
+						"});"
+					].join(EOL)
+					if opt.beautify
+						try
+							content = beautify content, opt.beautify
+						catch e
+							console.log 'gulp-mt2amd Error:', e.message
+							console.log 'file:', file.path
+							console.log getErrorStack(content, e.line)
+					file.contents = new Buffer content
+					file.path = originFilePath.replace /(\.riot\.html|\.tag)$/, '.js'
+					resolve file
+				(err) ->
+					reject err
+			).done()
+		else if extName in ['.less', '.scss', '.css']
 			if extName is '.less'
 				cssCompiler = compileLess
 			else if extName is '.scss'

@@ -11,7 +11,7 @@ gulp.task 'compile', ->
 
 gulp.task 'example', ->
 	mt2amd = require './lib/index'
-	gulp.src(['example/src/**/*.tpl.html', 'example/src/**/*.css', 'example/src/**/*.less', 'example/src/**/*.scss'])
+	gulp.src(['example/src/**/*.tag', 'example/src/**/*.riot.html', 'example/src/**/*.tpl.html', 'example/src/**/*.css', 'example/src/**/*.less', 'example/src/**/*.scss'])
 		.pipe mt2amd
 			generateDataUri: true
 			beautify: true
