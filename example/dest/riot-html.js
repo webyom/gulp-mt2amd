@@ -1,5 +1,6 @@
 /* trace:example/src/riot-html.riot.html */
-define(function(require, exports, module) {
+define([ "require", "exports", "module", "riot", "jquery" ], function(require, exports, module) {
+    riot = require("riot");
     /* trace:example/src/style.css */
     /* trace:example/src/style.scss */
     /* trace:example/src/style.less */

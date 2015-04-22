@@ -11,6 +11,57 @@ sus = require 'sus'
 riot = require 'riot'
 
 EOL = '\n'
+EXPORTS_REGEXP = /(^|[^.])\bmodule\.exports\s*=[^=]/
+RIOT_EXT_REGEXP = /(\.riot\.html|\.tag)$/
+
+getUnixStylePath = (p) ->
+	p.split(path.sep).join '/'
+
+getBodyDeps = (def) ->
+	deps = []
+	got = {}
+	def = def.replace /(^|[^.])\brequire\s*\(\s*(["'])([^"']+?)\2\s*\)/mg, (full, lead, quote, dep) ->
+		pDep = dep.replace /\{\{([^{}]+)\}\}/g, quote + ' + $1 + ' + quote
+		qDep = quote + pDep + quote
+		got[dep] || deps.push qDep
+		got[dep] = 1
+		if pDep is dep
+			full
+		else
+			lead + 'require(' + qDep + ')'
+	{
+		def: def
+		deps: deps
+	}
+
+fixDefineParams = (def, depId, userDefinedBaseDir) ->
+	def = getBodyDeps def
+	bodyDeps = def.deps
+	fix = (full, b, d, quote, definedId, deps) ->
+		if bodyDeps.length
+			bodyDeps = bodyDeps.join(', ')
+			if (/^\[\s*\]$/).test deps
+				deps = "['require', 'exports', 'module', " + bodyDeps + "]"
+			else if deps
+				deps = deps.replace /]$/, ', ' + bodyDeps + ']'
+			else
+				deps = "['require', 'exports', 'module', " + bodyDeps + "], "
+		if definedId and not (/^\./).test definedId
+			id = definedId
+		else
+			id = depId || ''
+			if id and not userDefinedBaseDir and not (/^\./).test(id)
+				id = './' + id
+		[b, d, id && ("'" + getUnixStylePath(id) + "', "), deps || "['require', 'exports', 'module'], "].join ''
+	if not (/(^|[^.])\bdefine\s*\(/).test(def.def) and EXPORTS_REGEXP.test(def.def)
+		def = [
+			fix('define(', '', 'define(') + 'function(require, exports, module) {'
+			def.def
+			'});'
+		].join EOL
+	else
+		def = def.def.replace /(^|[^.])\b(define\s*\()\s*(?:(["'])([^"'\s]+)\3\s*,\s*)?\s*(\[[^\[\]]*\])?/m, fix
+	def
 
 htmlBase64img = (data, base, opt) ->
 	Q.Promise (resolve, reject) ->
@@ -253,19 +304,23 @@ module.exports.compile = (file, opt = {}) ->
 	Q.Promise (resolve, reject) ->
 		originFilePath = file.path
 		extName = path.extname originFilePath
-		if (/(\.riot\.html|\.tag)$/).test originFilePath
+		if RIOT_EXT_REGEXP.test originFilePath
 			compileRiot(file, opt).then(
 				(file) ->
 					if opt.trace
 						trace = '/* trace:' + path.relative(process.cwd(), originFilePath) + ' */' + EOL
 					else
 						trace = ''
+					processedContent = file.contents.toString()
 					content = [
 						trace
 						"define(function(require, exports, module) {"
-						file.contents.toString()
+						if (/(?:^|[^.])\brequire\s*\((["'])riot\1\s*\)/).test processedContent then "" else "riot = require('riot');"
+						processedContent
+						if EXPORTS_REGEXP.test processedContent then "" else "module.exports = '" + path.basename(originFilePath).replace(RIOT_EXT_REGEXP, '') + "'"
 						"});"
 					].join(EOL)
+					content = fixDefineParams content
 					if opt.beautify
 						try
 							content = beautify content, opt.beautify
@@ -274,7 +329,7 @@ module.exports.compile = (file, opt = {}) ->
 							console.log 'file:', file.path
 							console.log getErrorStack(content, e.line)
 					file.contents = new Buffer content
-					file.path = originFilePath.replace /(\.riot\.html|\.tag)$/, '.js'
+					file.path = originFilePath.replace RIOT_EXT_REGEXP, '.js'
 					resolve file
 				(err) ->
 					reject err
@@ -341,6 +396,7 @@ module.exports.compile = (file, opt = {}) ->
 						"	};"
 						"});"
 					].join(EOL).replace(/_\$out_\.push\(''\);/g, '')
+					content = fixDefineParams content
 					if opt.beautify
 						try
 							content = beautify content, opt.beautify

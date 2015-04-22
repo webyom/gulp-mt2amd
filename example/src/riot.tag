@@ -1,5 +1,3 @@
-var $ = require('jquery');
-
 /** @riot coffeescript */
 <todo>
 
@@ -29,6 +27,8 @@ var $ = require('jquery');
 
   <!-- this script tag is optional -->
   <script>
+    $ = require 'jquery'
+
     @items = opts.items
 
     @edit = (e) ->
@@ -51,7 +51,5 @@ var $ = require('jquery');
 </todo>
 
 <child>
-
+  $ = require 'jquery'
 </child>
-
-module.exports = 'todo';

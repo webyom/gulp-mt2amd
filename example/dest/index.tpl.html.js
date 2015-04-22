@@ -1,4 +1,4 @@
-define(function(require, exports, module) {
+define([ "require", "exports", "module", "jquery" ], function(require, exports, module) {
     function $encodeHtml(str) {
         return (str + "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/`/g, "&#96;").replace(/'/g, "&#39;").replace(/"/g, "&quot;");
     }
@@ -10,6 +10,7 @@ define(function(require, exports, module) {
         };
         with ($data) {
             /* trace:example/src/index.tpl.html */
+            var $ = require("jquery");
             _$out_.push("<div>Hello</div>");
             (function() {
                 with ($data) {
