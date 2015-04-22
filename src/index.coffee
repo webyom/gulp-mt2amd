@@ -39,13 +39,17 @@ fixDefineParams = (def, depId, userDefinedBaseDir) ->
 	bodyDeps = def.deps
 	fix = (full, b, d, quote, definedId, deps) ->
 		if bodyDeps.length
-			bodyDeps = bodyDeps.join(', ')
 			if (/^\[\s*\]$/).test deps
-				deps = "['require', 'exports', 'module', " + bodyDeps + "]"
+				deps = "['require', 'exports', 'module', " + bodyDeps.join(', ') + "]"
 			else if deps
-				deps = deps.replace /]$/, ', ' + bodyDeps + ']'
+				tmp = deps.replace(/'/g, '"').replace(/\s+/g, '').replace(/"\+"/g, '+')
+				deps = deps.replace(/^\[\s*|\s*\]$/g, '').split(/\s*,\s*/)
+				for bodyDep in bodyDeps
+					if tmp.indexOf(bodyDep.replace(/'/g, '"').replace(/\s+/g, '').replace(/"\+"/g, '+')) is -1
+						deps.push bodyDep
+				deps = '[' + deps.join(', ') + ']'
 			else
-				deps = "['require', 'exports', 'module', " + bodyDeps + "], "
+				deps = "['require', 'exports', 'module', " + bodyDeps.join(', ') + "], "
 		if definedId and not (/^\./).test definedId
 			id = definedId
 		else
