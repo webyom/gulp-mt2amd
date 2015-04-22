@@ -300,6 +300,8 @@ module.exports = (opt = {}) ->
 				@emit 'error', new gutil.PluginError('gulp-mt2amd', err)
 		).done()
 
+module.exports.fixDefineParams = fixDefineParams
+
 module.exports.compile = (file, opt = {}) ->
 	Q.Promise (resolve, reject) ->
 		originFilePath = file.path
