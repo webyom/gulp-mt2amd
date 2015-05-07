@@ -201,7 +201,7 @@ compileRiot = (file, opt) ->
 							else
 								trace = ''
 							content = trace + content.replace '<INC_PROCESS_ASYNC_MARK_' + i + '>', incContent
-						riotOpt = _.extend {}, opt.riotOpt, expr: true
+						riotOpt = _.extend {}, opt.riotOpt
 						m = content.match /(?:^|\r\n|\n|\r)\/\*\*\s*@riot\s+(coffeescript|es6)/
 						if m
 							riotOpt.type = m[1]
