@@ -12,7 +12,7 @@ gulpCssSprite = require 'gulp-img-css-sprite'
 riot = require 'riot'
 
 EOL = '\n'
-EXPORTS_REGEXP = /(^|[^.])\bmodule\.exports\s*=[^=]/
+EXPORTS_REGEXP = /(^|[^.])\b(module\.exports|exports\.[^.]+)\s*=[^=]/
 RIOT_EXT_REGEXP = /(\.riot\.html|\.tag)$/
 
 getUnixStylePath = (p) ->
