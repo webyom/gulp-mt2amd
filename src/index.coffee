@@ -345,13 +345,13 @@ module.exports.compile = (file, opt = {}) ->
 					processedContent = file.contents.toString()
 					content = [
 						trace
-						"define(function(require, exports, module) {"
+						if opt.commonjs then "" else "define(function(require, exports, module) {"
 						if (/(?:^|[^.])\brequire\s*\((["'])riot\1\s*\)/).test processedContent then "" else "riot = require('riot');"
 						processedContent
 						if EXPORTS_REGEXP.test processedContent then "" else "module.exports = '" + path.basename(originFilePath).replace(RIOT_EXT_REGEXP, '') + "'"
-						"});"
+						if opt.commonjs then "" else "});"
 					].join(EOL)
-					content = fixDefineParams content
+					content = fixDefineParams content if not opt.commonjs
 					if opt.beautify
 						try
 							content = beautify content, opt.beautify
@@ -379,13 +379,13 @@ module.exports.compile = (file, opt = {}) ->
 					else
 						trace = ''
 					content = [
-						"define(function(require, exports, module) {"
+						if opt.commonjs then "" else "define(function(require, exports, module) {"
 						"	exports.render = function() {"
 						"		var _$out_= [];"
 						trace + "		_$out_.push('" + file._cssContents.toString().replace(/\r\n|\n|\r/g, '').replace(/\s+/g, ' ') + "');"
 						"		return _$out_.join('');"
 						"	};"
-						"});"
+						if opt.commonjs then "" else "});"
 					].join(EOL)
 					if opt.beautify
 						try
@@ -404,7 +404,7 @@ module.exports.compile = (file, opt = {}) ->
 			compile(file, opt).then(
 				(processed) =>
 					content = [
-						"define(function(require, exports, module) {"
+						if opt.commonjs then "" else "define(function(require, exports, module) {"
 						"	function $encodeHtml(str) {"
 						"		return (str + '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\x60/g, '&#96;').replace(/\x27/g, '&#39;').replace(/\x22/g, '&quot;');"
 						"	}"
@@ -425,9 +425,9 @@ module.exports.compile = (file, opt = {}) ->
 								.split("%>").join(EOL + "		_$out_.push('") + "');"
 						"		return _$out_.join('');"
 						"	};"
-						"});"
+						if opt.commonjs then "" else "});"
 					].join(EOL).replace(/_\$out_\.push\(''\);/g, '')
-					content = fixDefineParams content
+					content = fixDefineParams content if not opt.commonjs
 					if opt.beautify
 						try
 							content = beautify content, opt.beautify
