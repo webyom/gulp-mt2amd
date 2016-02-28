@@ -380,11 +380,27 @@ module.exports.compile = (file, opt = {}) ->
 						trace = ''
 					content = [
 						if opt.commonjs then "" else "define(function(require, exports, module) {"
-						"	exports.render = function() {"
-						"		var _$out_= [];"
-						trace + "		_$out_.push('" + file._cssContents.toString().replace(/\r\n|\n|\r/g, '').replace(/\s+/g, ' ') + "');"
-						"		return _$out_.join('');"
-						"	};"
+						trace + "var cssContent = '" + file._cssContents.toString().replace(/\r\n|\n|\r/g, '').replace(/\s+/g, ' ') + "';"
+						"""
+						var moduleUri = module && module.uri;
+						var head = document.head || document.getElementsByTagName('head')[0];
+						var styleTagId = 'yom-style-module-inject-tag';
+						var styleTag = document.getElementById(styleTagId);
+						if (!styleTag) {
+							styleTag = document.createElement('style');
+							styleTag.id = styleTagId;
+							styleTag.type = 'text/css';
+							styleTag = head.appendChild(styleTag);
+						}
+						window._yom_style_module_injected = window._yom_style_module_injected || {};
+						if (!moduleUri) {
+							styleTag.appendChild(document.createTextNode(cssContent + '\\n'));
+						} else if(!window._yom_style_module_injected[moduleUri]) {
+							styleTag.appendChild(document.createTextNode('/* ' + moduleUri + ' */\\n' + cssContent + '\\n'));
+							window._yom_style_module_injected[moduleUri] = 1;
+						}
+						module.exports = cssContent;
+						"""
 						if opt.commonjs then "" else "});"
 					].join(EOL)
 					if opt.beautify
