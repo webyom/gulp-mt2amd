@@ -7,6 +7,7 @@ sass = require 'gulp-sass'
 gutil = require 'gulp-util'
 through = require 'through2'
 uglify = require 'uglify-js'
+minifier = require 'gulp-minifier'
 sus = require 'gulp-sus'
 gulpCssSprite = require 'gulp-img-css-sprite'
 riot = require 'riot'
@@ -124,12 +125,8 @@ compileLess = (file, opt) ->
 						cssBase64img(content, file.path, opt)
 				).then(
 					(content) ->
-						file.contents = new Buffer [
-							'<style type="text/css">'
-								content
-							'</style>'
-						].join EOL
-						file._cssContents = new Buffer content
+						file.contents = new Buffer content
+						minifier.minify file, minifyCSS: true
 						resolve file
 						next()
 					(err) ->
@@ -157,12 +154,8 @@ compileSass = (file, opt) ->
 					cssBase64img(content, file.path, opt)
 			).then(
 				(content) ->
-					file.contents = new Buffer [
-						'<style type="text/css">'
-							content
-						'</style>'
-					].join EOL
-					file._cssContents = new Buffer content
+					file.contents = new Buffer content
+					minifier.minify file, minifyCSS: true
 					resolve file
 				(err) ->
 					reject err
@@ -185,12 +178,8 @@ compileCss = (file, opt) ->
 				cssBase64img(content, file.path, opt)
 		).then(
 			(content) ->
-				file.contents = new Buffer [
-					'<style type="text/css">'
-						content
-					'</style>'
-				].join EOL
-				file._cssContents = new Buffer content
+				file.contents = new Buffer content
+				minifier.minify file, minifyCSS: true
 				resolve file
 			(err) ->
 				reject err
@@ -220,7 +209,14 @@ compileRiot = (file, opt) ->
 				htmlBase64img(content, path.dirname(file.path), opt).then(
 					(content) ->
 						results.forEach (incFile, i) ->
-							incContent = incFile.contents.toString()
+							if path.extname(incFile.path) is '.css'
+								incContent = [
+									'<style type="text/css">'
+									incFile.contents.toString()
+									'</style>'
+								].join EOL
+							else
+								incContent = incFile.contents.toString()
 							if opt.trace
 								trace = '/* trace:' + path.relative(process.cwd(), incFile._originalPath || incFile.path) + ' */' + EOL
 							else
@@ -266,7 +262,14 @@ compile = (file, opt, wrap) ->
 				htmlBase64img(content, path.dirname(file.path), opt).then(
 					(content) ->
 						results.forEach (incFile, i) ->
-							incContent = incFile.contents.toString()
+							if path.extname(incFile.path) is '.css'
+								incContent = [
+									'<style type="text/css">'
+									incFile.contents.toString()
+									'</style>'
+								].join EOL
+							else
+								incContent = incFile.contents.toString()
 							if opt.trace
 								trace = '<%/* trace:' + path.relative(process.cwd(), incFile._originalPath || incFile.path) + ' */%>' + EOL
 							else
@@ -380,7 +383,7 @@ module.exports.compile = (file, opt = {}) ->
 						trace = ''
 					content = [
 						if opt.commonjs then "" else "define(function(require, exports, module) {"
-						trace + "var cssContent = '" + file._cssContents.toString().replace(/\r\n|\n|\r/g, '').replace(/\s+/g, ' ') + "';"
+						trace + "var cssContent = '" + file.contents.toString().replace(/\r\n|\n|\r/g, '').replace(/('|\\)/g, '\\$1') + "';"
 						"""
 						var moduleUri = module && module.uri;
 						var head = document.head || document.getElementsByTagName('head')[0];
