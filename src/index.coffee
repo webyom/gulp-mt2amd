@@ -368,6 +368,19 @@ module.exports.compile = (file, opt = {}) ->
 				(err) ->
 					reject err
 			).done()
+		else if extName in ['.png', '.jpg', '.jpeg', '.gif', '.svg']
+			if opt.trace
+				trace = '/* trace:' + path.relative(process.cwd(), originFilePath) + ' */' + EOL
+			else
+				trace = ''
+			content = [
+				trace + if opt.commonjs then "" else "define(function(require, exports, module) {"
+				'	module.exports = "data:image/' + extName.replace(/^\./, '') + ';base64,' + fs.readFileSync(originFilePath, 'base64') + '";'
+				if opt.commonjs then "" else "});"
+			].join EOL
+			file.contents = new Buffer content
+			file.path = originFilePath + '.js'
+			resolve file
 		else if extName in ['.less', '.scss', '.css']
 			if extName is '.less'
 				cssCompiler = compileLess
@@ -382,8 +395,8 @@ module.exports.compile = (file, opt = {}) ->
 					else
 						trace = ''
 					content = [
-						if opt.commonjs then "" else "define(function(require, exports, module) {"
-						trace + "var cssContent = '" + file.contents.toString().replace(/\r\n|\n|\r/g, '').replace(/('|\\)/g, '\\$1') + "';"
+						trace + if opt.commonjs then "" else "define(function(require, exports, module) {"
+						"var cssContent = '" + file.contents.toString().replace(/\r\n|\n|\r/g, '').replace(/('|\\)/g, '\\$1') + "';"
 						"""
 						var moduleUri = module && module.uri;
 						var head = document.head || document.getElementsByTagName('head')[0];

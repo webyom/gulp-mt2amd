@@ -1,5 +1,5 @@
+/* trace:example/src/style-inc.css */
 define(function(require, exports, module) {
-    /* trace:example/src/style-inc.css */
     var cssContent = ".menu{width:30px}";
     var moduleUri = module && module.uri;
     var head = document.head || document.getElementsByTagName("head")[0];

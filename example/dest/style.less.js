@@ -1,5 +1,5 @@
+/* trace:example/src/style.less */
 define(function(require, exports, module) {
-    /* trace:example/src/style.less */
     var cssContent = ".menu{width:200px;background-image:url(arrow.png?)}";
     var moduleUri = module && module.uri;
     var head = document.head || document.getElementsByTagName("head")[0];
