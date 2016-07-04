@@ -442,23 +442,23 @@ module.exports.compile = (file, opt = {}) ->
 						"	}"
 						"	exports.render = function($data, $opt) {"
 						"		$data = $data || {};"
-						"		var _$out_= [];"
-						"		var $print = function(str) {_$out_.push(str);};"
-						"		_$out_.push('" + processed.contents.toString().replace /<\/script>/ig, '</s<%=""%>cript>'
+						"		var _$out_= '';"
+						"		var $print = function(str) {_$out_ += str;};"
+						"		_$out_ += '" + processed.contents.toString().replace /<\/script>/ig, '</s<%=""%>cript>'
 								.replace(/\r\n|\n|\r/g, "\v")
 								.replace(/(?:^|%>).*?(?:<%|$)/g, ($0) ->
 									$0.replace(/('|\\)/g, "\\$1").replace(/[\v\t]/g, "").replace(/\s+/g, " ")
 								)
 								.replace(/[\v]/g, EOL)
-								.replace(/<%==(.*?)%>/g, "', $encodeHtml($1), '")
-								.replace(/<%=(.*?)%>/g, "', $1, '")
-								.replace(/<%(<-)?/g, "');" + EOL + "		")
-								.replace(/->(\w+)%>/g, EOL + "		$1.push('")
-								.split("%>").join(EOL + "		_$out_.push('") + "');"
-						"		return _$out_.join('');"
+								.replace(/<%==(.*?)%>/g, "' + $encodeHtml($1) + '")
+								.replace(/<%=(.*?)%>/g, "' + ($1) + '")
+								.replace(/<%(<-)?/g, "';" + EOL + "		")
+								.replace(/->(\w+)%>/g, EOL + "		$1 += '")
+								.split("%>").join(EOL + "		_$out_ += '") + "';"
+						"		return _$out_;"
 						"	};"
 						if opt.commonjs then "" else "});"
-					].join(EOL).replace(/_\$out_\.push\(''\);/g, '')
+					].join(EOL).replace(/_\$out_ \+= '';/g, '')
 					content = fixDefineParams content if not opt.commonjs
 					if opt.beautify
 						try
