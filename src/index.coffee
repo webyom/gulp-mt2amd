@@ -337,7 +337,7 @@ module.exports.fixDefineParams = fixDefineParams
 module.exports.compile = (file, opt = {}) ->
 	Q.Promise (resolve, reject) ->
 		originFilePath = file.path
-		extName = path.extname originFilePath
+		extName = path.extname(originFilePath).toLowerCase()
 		if RIOT_EXT_REGEXP.test originFilePath
 			compileRiot(file, opt).then(
 				(file) ->
@@ -368,6 +368,15 @@ module.exports.compile = (file, opt = {}) ->
 				(err) ->
 					reject err
 			).done()
+		else if extName is '.json'
+			if opt.trace
+				trace = '/* trace:' + path.relative(process.cwd(), originFilePath) + ' */' + EOL
+			else
+				trace = ''
+			content = trace + 'define(' + file.contents.toString() + ');'
+			file.contents = new Buffer content
+			file.path = originFilePath + '.js'
+			resolve file
 		else if extName in ['.png', '.jpg', '.jpeg', '.gif', '.svg']
 			if opt.trace
 				trace = '/* trace:' + path.relative(process.cwd(), originFilePath) + ' */' + EOL
