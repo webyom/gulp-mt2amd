@@ -373,7 +373,12 @@ module.exports.compile = (file, opt = {}) ->
 				trace = '/* trace:' + path.relative(process.cwd(), originFilePath) + ' */' + EOL
 			else
 				trace = ''
-			content = trace + 'define(' + file.contents.toString() + ');'
+			try
+				content = JSON.parse(file.contents.toString())
+			catch e
+				gutil.log gutil.colors.red 'gulp-mt2amd Error: invalid json file ' + file.path
+				throw e
+			content = trace + 'define(' + JSON.stringify(content, null, 2) + ');'
 			file.contents = new Buffer content
 			file.path = originFilePath + '.js'
 			resolve file
