@@ -1,4 +1,6 @@
 /* trace:example/src/index.json */
-define({
+define(function(require, exports, module) {
+module.exports = {
   "name": "webyom"
+};
 });

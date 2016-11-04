@@ -378,7 +378,11 @@ module.exports.compile = (file, opt = {}) ->
 			catch e
 				gutil.log gutil.colors.red 'gulp-mt2amd Error: invalid json file ' + file.path
 				throw e
-			content = trace + 'define(' + JSON.stringify(content, null, 2) + ');'
+			content = [
+				trace + if opt.commonjs then "" else "define(function(require, exports, module) {"
+				'module.exports = ' + JSON.stringify(content, null, 2) + ';'
+				if opt.commonjs then "" else "});"
+			].join EOL
 			file.contents = new Buffer content
 			file.path = originFilePath + '.js'
 			resolve file
