@@ -10,11 +10,9 @@ uglify = require 'uglify-js'
 minifier = require 'gulp-minifier'
 sus = require 'gulp-sus'
 gulpCssSprite = require 'gulp-img-css-sprite'
-riot = require 'riot'
 
 EOL = '\n'
 EXPORTS_REGEXP = /(^|[^.])\b(module\.exports|exports\.[^.]+)\s*=[^=]/
-RIOT_EXT_REGEXP = /(\.riot\.html|\.tag)$/
 
 getUnixStylePath = (p) ->
 	p.split(path.sep).join '/'
@@ -185,57 +183,6 @@ compileCss = (file, opt) ->
 				reject err
 		).done()
 
-compileRiot = (file, opt) ->
-	Q.Promise (resolve, reject) ->
-		content = file.contents.toString()
-		asyncList = []
-		content = content.replace /<!--\s*include\s+(['"])([^'"]+)\.(less|scss|css)\1\s*-->/mg, (full, quote, incName, ext) ->
-			asyncMark = '<INC_PROCESS_ASYNC_MARK_' + asyncList.length + '>'
-			incFilePath = path.resolve path.dirname(file.path), incName + '.' + ext
-			incFile = new gutil.File
-				base: file.base
-				cwd: file.cwd
-				path: incFilePath
-				contents: fs.readFileSync incFilePath
-			if ext is 'less'
-				asyncList.push compileLess(incFile, _.extend({}, opt, {_riot: true}))
-			if ext is 'scss'
-				asyncList.push compileSass(incFile, _.extend({}, opt, {_riot: true}))
-			if ext is 'css'
-				asyncList.push compileCss(incFile, _.extend({}, opt, {_riot: true}))
-			asyncMark
-		Q.all(asyncList).then(
-			(results) ->
-				htmlBase64img(content, path.dirname(file.path), opt).then(
-					(content) ->
-						results.forEach (incFile, i) ->
-							if path.extname(incFile.path) is '.css'
-								incContent = [
-									'<style type="text/css">'
-									incFile.contents.toString()
-									'</style>'
-								].join EOL
-							else
-								incContent = incFile.contents.toString()
-							if opt.trace
-								trace = '/* trace:' + path.relative(process.cwd(), incFile._originalPath || incFile.path) + ' */' + EOL
-							else
-								trace = ''
-							content = trace + content.replace '<INC_PROCESS_ASYNC_MARK_' + i + '>', incContent
-						riotOpt = _.extend {}, opt.riotOpt
-						m = content.match /(?:^|\r\n|\n|\r)\/\*\*\s*@riot\s+(coffeescript|es6)/
-						if m
-							riotOpt.type = m[1]
-						content = riot.compile content, riotOpt
-						file.contents = new Buffer content
-						resolve file
-					(err) ->
-						reject err
-				).done()
-			(err) ->
-				reject err
-		).done()
-
 compile = (file, opt, wrap) ->
 	Q.Promise (resolve, reject) ->
 		content = file.contents.toString()
@@ -338,37 +285,7 @@ module.exports.compile = (file, opt = {}) ->
 	Q.Promise (resolve, reject) ->
 		originFilePath = file.path
 		extName = path.extname(originFilePath).toLowerCase()
-		if RIOT_EXT_REGEXP.test originFilePath
-			compileRiot(file, opt).then(
-				(file) ->
-					if opt.trace
-						trace = '/* trace:' + path.relative(process.cwd(), originFilePath) + ' */' + EOL
-					else
-						trace = ''
-					processedContent = file.contents.toString()
-					content = [
-						trace
-						if opt.commonjs then "" else "define(function(require, exports, module) {"
-						if (/(?:^|[^.])\brequire\s*\((["'])riot\1\s*\)/).test processedContent then "" else "riot = require('riot');"
-						processedContent
-						if EXPORTS_REGEXP.test processedContent then "" else "module.exports = '" + path.basename(originFilePath).replace(RIOT_EXT_REGEXP, '') + "'"
-						if opt.commonjs then "" else "});"
-					].join(EOL)
-					content = fixDefineParams content if not opt.commonjs
-					if opt.beautify
-						try
-							content = beautify content, opt.beautify
-						catch e
-							console.log 'gulp-mt2amd Error:', e.message
-							console.log 'file:', file.path
-							console.log getErrorStack(content, e.line)
-					file.contents = new Buffer content
-					file.path = originFilePath.replace RIOT_EXT_REGEXP, '.js'
-					resolve file
-				(err) ->
-					reject err
-			).done()
-		else if extName is '.json'
+		if extName is '.json'
 			if opt.trace
 				trace = '/* trace:' + path.relative(process.cwd(), originFilePath) + ' */' + EOL
 			else

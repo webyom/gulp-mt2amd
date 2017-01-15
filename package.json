@@ -1,6 +1,6 @@
 {
   "name": "gulp-mt2amd",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Convert micro template into AMD module.",
   "keywords": [
     "amd",
@@ -43,7 +43,6 @@
     "postcss": "^4.0.3",
     "postcss-import": "^5.0.0",
     "q": "^1.0.1",
-    "riot": "^2.2.1",
     "through2": "^0.5.1",
     "uglify-js": "^2.2.5"
   },
