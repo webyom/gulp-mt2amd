@@ -1,7 +1,7 @@
 /* trace:example/src/style.less */
 define(function(require, exports, module) {
     var cssContent = ".menu{width:200px;background-image:url(arrow.png?)}";
-    var moduleUri = module && module.uri;
+    var moduleUri = typeof module != "undefined" && module.uri;
     var head = document.head || document.getElementsByTagName("head")[0];
     var styleTagId = "yom-style-module-inject-tag";
     var styleTag = document.getElementById(styleTagId);

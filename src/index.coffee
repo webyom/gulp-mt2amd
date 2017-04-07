@@ -284,10 +284,11 @@ module.exports.fixDefineParams = fixDefineParams
 module.exports.compile = (file, opt = {}) ->
 	Q.Promise (resolve, reject) ->
 		originFilePath = file.path
+		relativePath = path.relative process.cwd(), originFilePath
 		extName = path.extname(originFilePath).toLowerCase()
 		if extName is '.json'
 			if opt.trace
-				trace = '/* trace:' + path.relative(process.cwd(), originFilePath) + ' */' + EOL
+				trace = '/* trace:' + relativePath + ' */' + EOL
 			else
 				trace = ''
 			try
@@ -295,23 +296,25 @@ module.exports.compile = (file, opt = {}) ->
 			catch e
 				gutil.log gutil.colors.red 'gulp-mt2amd Error: invalid json file ' + file.path
 				throw e
+			exportContent = JSON.stringify(content, null, 2);
 			content = [
-				trace + if opt.commonjs then "" else "define(function(require, exports, module) {"
-				'module.exports = ' + JSON.stringify(content, null, 2) + ';'
-				if opt.commonjs then "" else "});"
+				trace + if opt.commonjs or opt.es6 then "" else "define(function(require, exports, module) {"
+				if opt.es6 then 'export default ' + exportContent + ';' else 'module.exports = ' + exportContent + ';'
+				if opt.commonjs or opt.es6 then "" else "});"
 			].join EOL
 			file.contents = new Buffer content
 			file.path = originFilePath + '.js'
 			resolve file
 		else if extName in ['.png', '.jpg', '.jpeg', '.gif', '.svg']
 			if opt.trace
-				trace = '/* trace:' + path.relative(process.cwd(), originFilePath) + ' */' + EOL
+				trace = '/* trace:' + relativePath + ' */' + EOL
 			else
 				trace = ''
+			exportContent = '"data:image/' + extName.replace(/^\./, '') + ';base64,' + fs.readFileSync(originFilePath, 'base64') + '"';
 			content = [
-				trace + if opt.commonjs then "" else "define(function(require, exports, module) {"
-				'	module.exports = "data:image/' + extName.replace(/^\./, '') + ';base64,' + fs.readFileSync(originFilePath, 'base64') + '";'
-				if opt.commonjs then "" else "});"
+				trace + if opt.commonjs or opt.es6 then "" else "define(function(require, exports, module) {"
+				if opt.es6 then 'export default ' + exportContent + ';' else 'module.exports = ' + exportContent + ';'
+				if opt.commonjs or opt.es6 then "" else "});"
 			].join EOL
 			file.contents = new Buffer content
 			file.path = originFilePath + '.js'
@@ -326,14 +329,14 @@ module.exports.compile = (file, opt = {}) ->
 			cssCompiler(file, opt).then(
 				(file) ->
 					if opt.trace
-						trace = '/* trace:' + path.relative(process.cwd(), originFilePath) + ' */' + EOL
+						trace = '/* trace:' + relativePath + ' */' + EOL
 					else
 						trace = ''
 					content = [
-						trace + if opt.commonjs then "" else "define(function(require, exports, module) {"
+						trace + if opt.commonjs or opt.es6 then "" else "define(function(require, exports, module) {"
 						"var cssContent = '" + file.contents.toString().replace(/\r\n|\n|\r/g, '').replace(/('|\\)/g, '\\$1') + "';"
 						"""
-						var moduleUri = module && module.uri;
+						var moduleUri = typeof(module) != 'undefined' && module.uri;
 						var head = document.head || document.getElementsByTagName('head')[0];
 						var styleTagId = 'yom-style-module-inject-tag';
 						var styleTag = document.getElementById(styleTagId);
@@ -350,9 +353,9 @@ module.exports.compile = (file, opt = {}) ->
 							styleTag.appendChild(document.createTextNode('/* ' + moduleUri + ' */\\n' + cssContent + '\\n'));
 							window._yom_style_module_injected[moduleUri] = 1;
 						}
-						module.exports = cssContent;
 						"""
-						if opt.commonjs then "" else "});"
+						if opt.es6 then 'export default cssContent;' else 'module.exports = cssContent;'
+						if opt.commonjs or opt.es6 then "" else "});"
 					].join(EOL)
 					if opt.beautify
 						try
@@ -371,11 +374,11 @@ module.exports.compile = (file, opt = {}) ->
 			compile(file, opt).then(
 				(processed) =>
 					content = [
-						if opt.commonjs then "" else "define(function(require, exports, module) {"
+						if opt.commonjs or opt.es6 then "" else "define(function(require, exports, module) {"
 						"	function $encodeHtml(str) {"
 						"		return (str + '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\x60/g, '&#96;').replace(/\x27/g, '&#39;').replace(/\x22/g, '&quot;');"
 						"	}"
-						"	exports.render = function($data, $opt) {"
+						"	function render($data, $opt) {"
 						"		$data = $data || {};"
 						"		var _$out_= '';"
 						"		var $print = function(str) {_$out_ += str;};"
@@ -391,8 +394,9 @@ module.exports.compile = (file, opt = {}) ->
 								.replace(/->(\w+)%>/g, EOL + "		$1 += '")
 								.split("%>").join(EOL + "		_$out_ += '") + "';"
 						"		return _$out_;"
-						"	};"
-						if opt.commonjs then "" else "});"
+						"	}"
+						if opt.es6 then 'export default {render: render};' else 'exports.render = render;'
+						if opt.commonjs or opt.es6 then "" else "});"
 					].join(EOL).replace(/_\$out_ \+= '';/g, '')
 					content = fixDefineParams content if not opt.commonjs
 					if opt.beautify
