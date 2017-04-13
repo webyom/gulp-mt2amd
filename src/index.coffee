@@ -299,7 +299,7 @@ module.exports.compile = (file, opt = {}) ->
 			exportContent = JSON.stringify(content, null, 2);
 			content = [
 				trace + if opt.commonjs or opt.es6 then "" else "define(function(require, exports, module) {"
-				if opt.es6 then 'export default ' + exportContent + ';' else 'module.exports = ' + exportContent + ';'
+				if opt.es6 then "export default " + exportContent + ";" else "module.exports = " + exportContent + ";"
 				if opt.commonjs or opt.es6 then "" else "});"
 			].join EOL
 			file.contents = new Buffer content
@@ -313,7 +313,7 @@ module.exports.compile = (file, opt = {}) ->
 			exportContent = '"data:image/' + extName.replace(/^\./, '') + ';base64,' + fs.readFileSync(originFilePath, 'base64') + '"';
 			content = [
 				trace + if opt.commonjs or opt.es6 then "" else "define(function(require, exports, module) {"
-				if opt.es6 then 'export default ' + exportContent + ';' else 'module.exports = ' + exportContent + ';'
+				if opt.es6 then "export default " + exportContent + ";" else "module.exports = " + exportContent + ";"
 				if opt.commonjs or opt.es6 then "" else "});"
 			].join EOL
 			file.contents = new Buffer content
@@ -354,7 +354,7 @@ module.exports.compile = (file, opt = {}) ->
 							window._yom_style_module_injected[moduleUri] = 1;
 						}
 						"""
-						if opt.es6 then 'export default cssContent;' else 'module.exports = cssContent;'
+						if opt.es6 then "__MT2AMD_ES6_EXPORT_DEFAULT__+cssContent;" else "module.exports = cssContent;"
 						if opt.commonjs or opt.es6 then "" else "});"
 					].join(EOL)
 					if opt.beautify
@@ -364,6 +364,8 @@ module.exports.compile = (file, opt = {}) ->
 							console.log 'gulp-mt2amd Error:', e.message
 							console.log 'file:', file.path
 							console.log getErrorStack(content, e.line)
+					if opt.es6
+						content = content.replace /__MT2AMD_ES6_EXPORT_DEFAULT__\s*\+\s*/g, 'export default '
 					file.contents = new Buffer content
 					file.path = originFilePath + '.js'
 					resolve file
@@ -395,7 +397,7 @@ module.exports.compile = (file, opt = {}) ->
 								.split("%>").join(EOL + "		_$out_ += '") + "';"
 						"		return _$out_;"
 						"	}"
-						if opt.es6 then 'export default {render: render};' else 'exports.render = render;'
+						if opt.es6 then "__MT2AMD_ES6_EXPORT_DEFAULT__+{render: render};" else "exports.render = render;"
 						if opt.commonjs or opt.es6 then "" else "});"
 					].join(EOL).replace(/_\$out_ \+= '';/g, '')
 					content = fixDefineParams content if not opt.commonjs
@@ -406,6 +408,8 @@ module.exports.compile = (file, opt = {}) ->
 							console.log 'gulp-mt2amd Error:', e.message
 							console.log 'file:', file.path
 							console.log getErrorStack(content, e.line)
+					if opt.es6
+						content = content.replace /__MT2AMD_ES6_EXPORT_DEFAULT__\s*\+\s*/g, 'export default '
 					file.contents = new Buffer content
 					file.path = file.path + '.js'
 					resolve file
