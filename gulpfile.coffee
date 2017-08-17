@@ -1,3 +1,4 @@
+crypto = require 'crypto'
 gulp = require 'gulp'
 coffee = require 'gulp-coffee'
 postcss = require 'postcss'
@@ -27,7 +28,11 @@ gulp.task 'example', ['sprite'], ->
 					dir: 'example/src'
 			beautify: true
 			trace: true
-			cssModuleClassNameLength: 8
+			cssModuleClassNameGenerator: (css) ->
+				'module-' + crypto.createHash('md5')
+					.update(css)
+					.digest('hex')
+					.slice(0, 8)
 			cssModuleClassNamePlaceholder: '___module_class_name___'
 			postcss: (file, type) ->
 				res = postcss()

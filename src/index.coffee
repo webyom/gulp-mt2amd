@@ -334,10 +334,12 @@ module.exports.compile = (file, opt = {}) ->
 					else
 						trace = ''
 					cssContent = file.contents.toString().replace(/\r\n|\n|\r/g, '').replace(/('|\\)/g, '\\$1')
-					digest = crypto.createHash('md5')
-						.update(cssContent)
-						.digest('hex')
-					moduleClassName = digest.slice(0, if opt.cssModuleClassNameLength > 0 then opt.cssModuleClassNameLength else 32)
+					if opt.cssModuleClassNameGenerator
+						moduleClassName = opt.cssModuleClassNameGenerator cssContent
+					else 
+						moduleClassName = '_' + crypto.createHash('md5')
+							.update(cssContent)
+							.digest('hex')
 					originalCssContent = cssContent
 					cssContent = cssContent.replace new RegExp('\\.' + (opt.cssModuleClassNamePlaceholder || '__module_class_name__'), 'g'), '.' + moduleClassName
 					moduleClassName = '' if cssContent is originalCssContent
