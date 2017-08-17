@@ -1,6 +1,7 @@
 /* trace:example/src/style.less */
 define(function(require, exports, module) {
-    var cssContent = ".menu{width:200px;background-image:url(arrow.png?)}";
+    var moduleClassName = "89de1ef2";
+    var cssContent = ".89de1ef2 .menu{width:200px;background-image:url(arrow.png?)}.89de1ef2 .bar,.89de1ef2 .foo,.89de1ef2 .foo .bar{width:200px}";
     var moduleUri = typeof module != "undefined" && module.uri;
     var head = document.head || document.getElementsByTagName("head")[0];
     var styleTagId = "yom-style-module-inject-tag";
@@ -18,5 +19,8 @@ define(function(require, exports, module) {
         styleTag.appendChild(document.createTextNode("/* " + moduleUri + " */\n" + cssContent + "\n"));
         window._yom_style_module_injected[moduleUri] = 1;
     }
-    module.exports = cssContent;
+    module.exports = {
+        moduleClassName: moduleClassName,
+        cssContent: cssContent
+    };
 });

@@ -2,6 +2,7 @@ _ = require 'lodash'
 Q = require 'q'
 fs = require 'fs'
 path = require 'path'
+crypto = require 'crypto'
 less = require 'gulp-less'
 sass = require 'gulp-sass'
 gutil = require 'gulp-util'
@@ -332,9 +333,16 @@ module.exports.compile = (file, opt = {}) ->
 						trace = '/* trace:' + relativePath + ' */' + EOL
 					else
 						trace = ''
+					cssContent = file.contents.toString().replace(/\r\n|\n|\r/g, '').replace(/('|\\)/g, '\\$1')
+					digest = crypto.createHash('md5')
+						.update(cssContent)
+						.digest('hex')
+					moduleClassName = digest.slice(0, if opt.cssModuleClassNameLength > 0 then opt.cssModuleClassNameLength else 32)
+					cssContent = cssContent.replace new RegExp('\\.' + (opt.cssModuleClassNamePlaceholder || '__module_class_name__'), 'g'), '.' + moduleClassName
 					content = [
 						trace + if opt.commonjs or opt.es6 then "" else "define(function(require, exports, module) {"
-						"var cssContent = '" + file.contents.toString().replace(/\r\n|\n|\r/g, '').replace(/('|\\)/g, '\\$1') + "';"
+						"var moduleClassName = '" + moduleClassName + "';"
+						"var cssContent = '" + cssContent + "';"
 						"""
 						var moduleUri = typeof(module) != 'undefined' && module.uri;
 						var head = document.head || document.getElementsByTagName('head')[0];
@@ -354,7 +362,7 @@ module.exports.compile = (file, opt = {}) ->
 							window._yom_style_module_injected[moduleUri] = 1;
 						}
 						"""
-						if opt.es6 then "__MT2AMD_ES6_EXPORT_DEFAULT__+cssContent;" else "module.exports = cssContent;"
+						if opt.es6 then "__MT2AMD_ES6_EXPORT_DEFAULT__+{moduleClassName: moduleClassName, cssContent: cssContent};" else "module.exports = {moduleClassName: moduleClassName, cssContent: cssContent};"
 						if opt.commonjs or opt.es6 then "" else "});"
 					].join(EOL)
 					if opt.beautify

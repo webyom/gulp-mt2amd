@@ -27,6 +27,8 @@ gulp.task 'example', ['sprite'], ->
 					dir: 'example/src'
 			beautify: true
 			trace: true
+			cssModuleClassNameLength: 8
+			cssModuleClassNamePlaceholder: '___module_class_name___'
 			postcss: (file, type) ->
 				res = postcss()
 					.use postcssImport()

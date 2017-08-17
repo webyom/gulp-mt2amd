@@ -1,6 +1,17 @@
 @width: 200px;
 
-.menu {
-	width: @width;
-	background-image: url(./arrow.png?);
+.___module_class_name___ {
+	.menu {
+		width: @width;
+		background-image: url(./arrow.png?);
+	}
+	.foo {
+		width: @width;
+		.bar {
+			width: @width;
+		}
+	}
+	.bar {
+		width: @width;
+	}
 }
