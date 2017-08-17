@@ -338,7 +338,9 @@ module.exports.compile = (file, opt = {}) ->
 						.update(cssContent)
 						.digest('hex')
 					moduleClassName = digest.slice(0, if opt.cssModuleClassNameLength > 0 then opt.cssModuleClassNameLength else 32)
+					originalCssContent = cssContent
 					cssContent = cssContent.replace new RegExp('\\.' + (opt.cssModuleClassNamePlaceholder || '__module_class_name__'), 'g'), '.' + moduleClassName
+					moduleClassName = '' if cssContent is originalCssContent
 					content = [
 						trace + if opt.commonjs or opt.es6 then "" else "define(function(require, exports, module) {"
 						"var moduleClassName = '" + moduleClassName + "';"

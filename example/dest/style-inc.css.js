@@ -1,6 +1,6 @@
 /* trace:example/src/style-inc.css */
 define(function(require, exports, module) {
-    var moduleClassName = "138cabec";
+    var moduleClassName = "";
     var cssContent = ".menu{width:30px}";
     var moduleUri = typeof module != "undefined" && module.uri;
     var head = document.head || document.getElementsByTagName("head")[0];
