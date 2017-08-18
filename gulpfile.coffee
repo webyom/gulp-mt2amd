@@ -6,6 +6,10 @@ postcssImport = require 'postcss-import'
 autoprefixer = require 'autoprefixer-core'
 imgCssSprite = require 'gulp-img-css-sprite'
 
+gulp.task 'copy', ->
+	gulp.src('src/**/*.js')
+		.pipe gulp.dest('lib')
+
 gulp.task 'compile', ->
 	gulp.src('src/**/*.coffee')
 		.pipe coffee()
@@ -34,6 +38,7 @@ gulp.task 'example', ['sprite'], ->
 					.digest('hex')
 					.slice(0, 8)
 			cssModuleClassNamePlaceholder: '___module_class_name___'
+			useExternalCssModuleHelper: false
 			postcss: (file, type) ->
 				res = postcss()
 					.use postcssImport()
@@ -43,4 +48,4 @@ gulp.task 'example', ['sprite'], ->
 				res.css
 		.pipe gulp.dest('example/dest')
 
-gulp.task 'default', ['compile']
+gulp.task 'default', ['copy', 'compile']

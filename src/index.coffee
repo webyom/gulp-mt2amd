@@ -14,6 +14,7 @@ gulpCssSprite = require 'gulp-img-css-sprite'
 
 EOL = '\n'
 EXPORTS_REGEXP = /(^|[^.])\b(module\.exports|exports\.[^.]+)\s*=[^=]/
+CSS_MODULE_HELPER = fs.readFileSync(path.join(__dirname, 'css-module-helper.js')).toString()
 
 getUnixStylePath = (p) ->
 	p.split(path.sep).join '/'
@@ -345,28 +346,10 @@ module.exports.compile = (file, opt = {}) ->
 					moduleClassName = '' if cssContent is originalCssContent
 					content = [
 						trace + if opt.commonjs or opt.es6 then "" else "define(function(require, exports, module) {"
-						"var moduleClassName = '" + moduleClassName + "';"
-						"var cssContent = '" + cssContent + "';"
-						"""
-						var moduleUri = typeof(module) != 'undefined' && module.uri;
-						var head = document.head || document.getElementsByTagName('head')[0];
-						var styleTagId = 'yom-style-module-inject-tag';
-						var styleTag = document.getElementById(styleTagId);
-						if (!styleTag) {
-							styleTag = document.createElement('style');
-							styleTag.id = styleTagId;
-							styleTag.type = 'text/css';
-							styleTag = head.appendChild(styleTag);
-						}
-						window._yom_style_module_injected = window._yom_style_module_injected || {};
-						if (!moduleUri) {
-							styleTag.appendChild(document.createTextNode(cssContent + '\\n'));
-						} else if(!window._yom_style_module_injected[moduleUri]) {
-							styleTag.appendChild(document.createTextNode('/* ' + moduleUri + ' */\\n' + cssContent + '\\n'));
-							window._yom_style_module_injected[moduleUri] = 1;
-						}
-						"""
-						if opt.es6 then "__MT2AMD_ES6_EXPORT_DEFAULT__+{moduleClassName: moduleClassName, cssContent: cssContent};" else "module.exports = {moduleClassName: moduleClassName, cssContent: cssContent};"
+						if opt.useExternalCssModuleHelper then "" else CSS_MODULE_HELPER
+						"var moduleUri = typeof(module) != 'undefined' && module.uri;"
+						"var expo = yomCssModuleHelper('" + moduleClassName + "', '" + cssContent + "', moduleUri);"
+						if opt.es6 then "__MT2AMD_ES6_EXPORT_DEFAULT__+expo;" else "module.exports = expo;"
 						if opt.commonjs or opt.es6 then "" else "});"
 					].join(EOL)
 					if opt.beautify
