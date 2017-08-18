@@ -17,6 +17,9 @@ define(function(require, exports, module) {
             styleTag.appendChild(document.createTextNode("/* " + moduleUri + " */\n" + cssContent + "\n"));
             window._yom_style_module_injected[moduleUri] = 1;
         }
+        function formatClassName(cn) {
+            return cn.replace(/^\s*&/, className).replace(/\s+&/g, " " + className).replace(/&/g, "");
+        }
         function moduleClassNames() {
             var cns = [];
             var args = Array.prototype.slice.call(arguments);
@@ -27,12 +30,12 @@ define(function(require, exports, module) {
                 if (typeof cn == "object") {
                     Object.keys(cn).forEach(function(k) {
                         if (cn[k]) {
-                            k = k.replace(/^&/, className).replace(/&/g, "");
+                            k = formatClassName(k);
                             k && cns.push(k);
                         }
                     });
                 } else {
-                    cn = cn.replace(/^&/, className).replace(/&/g, "");
+                    cn = formatClassName(cn);
                     cn && cns.push(cn);
                 }
             });
