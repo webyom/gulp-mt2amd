@@ -5,7 +5,9 @@ path = require 'path'
 crypto = require 'crypto'
 less = require 'gulp-less'
 sass = require 'gulp-sass'
-gutil = require 'gulp-util'
+Vinyl = require 'vinyl'
+chalk = require 'chalk'
+PluginError = require 'plugin-error'
 through = require 'through2'
 uglify = require 'uglify-js'
 minifier = require 'gulp-minifier'
@@ -192,7 +194,7 @@ compile = (file, opt, wrap) ->
 		content = content.replace /<!--\s*include\s+(['"])([^'"]+)\.(tpl\.html|less|scss|css)\1\s*-->/mg, (full, quote, incName, ext) ->
 			asyncMark = '<INC_PROCESS_ASYNC_MARK_' + asyncList.length + '>'
 			incFilePath = path.resolve path.dirname(file.path), incName + '.' + ext
-			incFile = new gutil.File
+			incFile = new Vinyl
 				base: file.base
 				cwd: file.cwd
 				path: incFilePath
@@ -271,14 +273,14 @@ getErrorStack = (content, line) ->
 
 module.exports = (opt = {}) ->
 	through.obj (file, enc, next) ->
-		return @emit 'error', new gutil.PluginError('gulp-mt2amd', 'File can\'t be null') if file.isNull()
-		return @emit 'error', new gutil.PluginError('gulp-mt2amd', 'Streams not supported') if file.isStream()
+		return @emit 'error', new PluginError('gulp-mt2amd', 'File can\'t be null') if file.isNull()
+		return @emit 'error', new PluginError('gulp-mt2amd', 'Streams not supported') if file.isStream()
 		module.exports.compile(file, opt).then(
 			(file) =>
 				@push file
 				next()
 			(err) =>
-				@emit 'error', new gutil.PluginError('gulp-mt2amd', err)
+				@emit 'error', new PluginError('gulp-mt2amd', err)
 		).done()
 
 module.exports.fixDefineParams = fixDefineParams
@@ -296,7 +298,7 @@ module.exports.compile = (file, opt = {}) ->
 			try
 				content = JSON.parse(file.contents.toString())
 			catch e
-				gutil.log gutil.colors.red 'gulp-mt2amd Error: invalid json file ' + file.path
+				console.log chalk.red 'gulp-mt2amd Error: invalid json file ' + file.path
 				throw e
 			exportContent = JSON.stringify(content, null, 2);
 			content = [
