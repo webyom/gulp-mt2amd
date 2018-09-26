@@ -302,9 +302,9 @@ module.exports.compile = (file, opt = {}) ->
 				throw e
 			exportContent = JSON.stringify(content, null, 2);
 			content = [
-				trace + if opt.commonjs or opt.es6 then "" else "define(function(require, exports, module) {"
-				if opt.es6 then "export default " + exportContent + ";" else "module.exports = " + exportContent + ";"
-				if opt.commonjs or opt.es6 then "" else "});"
+				trace + if opt.commonjs or opt.esModule then "" else "define(function(require, exports, module) {"
+				if opt.esModule then "export default " + exportContent + ";" else "module.exports = " + exportContent + ";"
+				if opt.commonjs or opt.esModule then "" else "});"
 			].join EOL
 			file.contents = new Buffer content
 			file.path = originFilePath + '.js'
@@ -316,9 +316,9 @@ module.exports.compile = (file, opt = {}) ->
 				trace = ''
 			exportContent = '"data:image/' + extName.replace(/^\./, '') + ';base64,' + fs.readFileSync(originFilePath, 'base64') + '"';
 			content = [
-				trace + if opt.commonjs or opt.es6 then "" else "define(function(require, exports, module) {"
-				if opt.es6 then "export default " + exportContent + ";" else "module.exports = " + exportContent + ";"
-				if opt.commonjs or opt.es6 then "" else "});"
+				trace + if opt.commonjs or opt.esModule then "" else "define(function(require, exports, module) {"
+				if opt.esModule then "export default " + exportContent + ";" else "module.exports = " + exportContent + ";"
+				if opt.commonjs or opt.esModule then "" else "});"
 			].join EOL
 			file.contents = new Buffer content
 			file.path = originFilePath + '.js'
@@ -336,7 +336,17 @@ module.exports.compile = (file, opt = {}) ->
 						trace = '/* trace:' + relativePath + ' */' + EOL
 					else
 						trace = ''
-					cssContent = file.contents.toString().replace(/\r\n|\n|\r/g, '').replace(/('|\\)/g, '\\$1')
+					cssContent = file.contents.toString().replace(/[\r\n]/g, '').replace(/('|\\)/g, '\\$1')
+					if opt.ngStyle
+						content = [
+							trace + if opt.commonjs or opt.esModule then "" else "define(function(require, exports, module) {"
+							if opt.esModule then "export default '" + cssContent + "';" else "module.exports = '" + cssContent + "';"
+							if opt.commonjs or opt.esModule then "" else "});"
+						].join EOL
+						file.contents = new Buffer content
+						file.path = originFilePath + '.js'
+						resolve file
+						return
 					if opt.cssModuleClassNameGenerator
 						moduleClassName = opt.cssModuleClassNameGenerator cssContent
 					else 
@@ -347,12 +357,12 @@ module.exports.compile = (file, opt = {}) ->
 					cssContent = cssContent.replace new RegExp('\\.' + (opt.cssModuleClassNamePlaceholder || '__module_class_name__'), 'g'), '.' + moduleClassName
 					moduleClassName = '' if cssContent is originalCssContent
 					content = [
-						trace + if opt.commonjs or opt.es6 then "" else "define(function(require, exports, module) {"
+						trace + if opt.commonjs or opt.esModule then "" else "define(function(require, exports, module) {"
 						if opt.useExternalCssModuleHelper then "" else CSS_MODULE_HELPER
 						"var moduleUri = typeof(module) != 'undefined' && module.uri;"
 						"var expo = yomCssModuleHelper('" + moduleClassName + "', '" + cssContent + "', moduleUri);"
-						if opt.es6 then "__MT2AMD_ES6_EXPORT_DEFAULT__+expo;" else "module.exports = expo;"
-						if opt.commonjs or opt.es6 then "" else "});"
+						if opt.esModule then "__MT2AMD_ES_MODULE_EXPORT_DEFAULT__+expo;" else "module.exports = expo;"
+						if opt.commonjs or opt.esModule then "" else "});"
 					].join(EOL)
 					if opt.beautify
 						try
@@ -361,19 +371,33 @@ module.exports.compile = (file, opt = {}) ->
 							console.log 'gulp-mt2amd Error:', e.message
 							console.log 'file:', file.path
 							console.log getErrorStack(content, e.line)
-					if opt.es6
-						content = content.replace /__MT2AMD_ES6_EXPORT_DEFAULT__\s*\+\s*/g, 'export default '
+					if opt.esModule
+						content = content.replace /__MT2AMD_ES_MODULE_EXPORT_DEFAULT__\s*\+\s*/g, 'export default '
 					file.contents = new Buffer content
 					file.path = originFilePath + '.js'
 					resolve file
 				(err) ->
 					reject err
 			).done()
+		else if opt.ngTemplate
+			if opt.trace
+				trace = '/* trace:' + relativePath + ' */' + EOL
+			else
+				trace = ''
+			exportContent = "'" + file.contents.toString().replace(/('|\\)/g, "\\$1").replace(/[\v\t\r\n]/g, "").replace(/\s+/g, " ") + "'"
+			content = [
+				trace + if opt.commonjs or opt.esModule then "" else "define(function(require, exports, module) {"
+				if opt.esModule then "export default " + exportContent + ";" else "module.exports = " + exportContent + ";"
+				if opt.commonjs or opt.esModule then "" else "});"
+			].join EOL
+			file.contents = new Buffer content
+			file.path = originFilePath + '.js'
+			resolve file
 		else
 			compile(file, opt).then(
 				(processed) =>
 					content = [
-						if opt.commonjs or opt.es6 then "" else "define(function(require, exports, module) {"
+						if opt.commonjs or opt.esModule then "" else "define(function(require, exports, module) {"
 						"	function $encodeHtml(str) {"
 						"		return (str + '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\x60/g, '&#96;').replace(/\x27/g, '&#39;').replace(/\x22/g, '&quot;');"
 						"	}"
@@ -394,8 +418,8 @@ module.exports.compile = (file, opt = {}) ->
 								.split("%>").join(EOL + "		_$out_ += '") + "';"
 						"		return _$out_;"
 						"	}"
-						if opt.es6 then "__MT2AMD_ES6_EXPORT_DEFAULT__+{render: render};" else "exports.render = render;"
-						if opt.commonjs or opt.es6 then "" else "});"
+						if opt.esModule then "__MT2AMD_ES_MODULE_EXPORT_DEFAULT__+{render: render};" else "exports.render = render;"
+						if opt.commonjs or opt.esModule then "" else "});"
 					].join(EOL).replace(/_\$out_ \+= '';/g, '')
 					content = fixDefineParams content if not opt.commonjs
 					if opt.beautify
@@ -405,8 +429,8 @@ module.exports.compile = (file, opt = {}) ->
 							console.log 'gulp-mt2amd Error:', e.message
 							console.log 'file:', file.path
 							console.log getErrorStack(content, e.line)
-					if opt.es6
-						content = content.replace /__MT2AMD_ES6_EXPORT_DEFAULT__\s*\+\s*/g, 'export default '
+					if opt.esModule
+						content = content.replace /__MT2AMD_ES_MODULE_EXPORT_DEFAULT__\s*\+\s*/g, 'export default '
 					file.contents = new Buffer content
 					file.path = file.path + '.js'
 					resolve file
