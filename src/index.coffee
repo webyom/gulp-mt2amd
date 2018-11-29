@@ -121,19 +121,28 @@ compileLess = (file, opt) ->
 		lessStream = less opt.lessOpt
 		lessStream.pipe through.obj(
 			(file, enc, next) ->
-				content = if opt.postcss then opt.postcss(file, 'less') else file.contents.toString()
-				cssSprite(content, file.path, opt).then(
-					(content) ->
-						cssBase64img(content, file.path, opt)
+				Q.Promise((resolve, reject) ->
+					if opt.postcss
+						opt.postcss(file, 'less').then resolve, reject
+					else
+						resolve({css: file.contents.toString()})
 				).then(
-					(content) ->
-						file.contents = new Buffer content
-						minifier.minify file, minifyCSS: true
-						resolve file
-						next()
+					(res) ->
+						content = res.css
+						cssSprite(content, file.path, opt).then(
+							(content) ->
+								cssBase64img(content, file.path, opt)
+						).then(
+							(content) ->
+								file.contents = new Buffer content
+								minifier.minify file, minifyCSS: true
+								resolve file
+							(err) ->
+								reject err
+						).done()
 					(err) ->
 						reject err
-				).done()
+				)
 		)
 		lessStream.on 'error', (e) ->
 			console.log 'gulp-mt2amd Error:', e.message
@@ -150,18 +159,28 @@ compileSass = (file, opt) ->
 		file._originalPath = file.path
 		sassStream = sass opt.sassOpt
 		sassStream.on 'data', (file) ->
-			content = if opt.postcss then opt.postcss(file, 'scss') else file.contents.toString()
-			cssSprite(content, file.path, opt).then(
-				(content) ->
-					cssBase64img(content, file.path, opt)
+			Q.Promise((resolve, reject) ->
+				if opt.postcss
+					opt.postcss(file, 'scss').then resolve, reject
+				else
+					resolve({css: file.contents.toString()})
 			).then(
-				(content) ->
-					file.contents = new Buffer content
-					minifier.minify file, minifyCSS: true
-					resolve file
+				(res) ->
+					content = res.css
+					cssSprite(content, file.path, opt).then(
+						(content) ->
+							cssBase64img(content, file.path, opt)
+					).then(
+						(content) ->
+							file.contents = new Buffer content
+							minifier.minify file, minifyCSS: true
+							resolve file
+						(err) ->
+							reject err
+					).done()
 				(err) ->
 					reject err
-			).done()
+			)
 		sassStream.on 'error', (e) ->
 			console.log 'gulp-mt2amd Error:', e.message
 			console.log 'file:', file.path
@@ -174,18 +193,28 @@ compileCss = (file, opt) ->
 		else
 			trace = ''
 		file._originalPath = file.path
-		content = if opt.postcss then opt.postcss(file, 'css') else file.contents.toString()
-		cssSprite(content, file.path, opt).then(
-			(content) ->
-				cssBase64img(content, file.path, opt)
+		Q.Promise((resolve, reject) ->
+			if opt.postcss
+				opt.postcss(file, 'css').then resolve, reject
+			else
+				resolve({css: file.contents.toString()})
 		).then(
-			(content) ->
-				file.contents = new Buffer content
-				minifier.minify file, minifyCSS: true
-				resolve file
+			(res) ->
+				content = res.css
+				cssSprite(content, file.path, opt).then(
+					(content) ->
+						cssBase64img(content, file.path, opt)
+				).then(
+					(content) ->
+						file.contents = new Buffer content
+						minifier.minify file, minifyCSS: true
+						resolve file
+					(err) ->
+						reject err
+				).done()
 			(err) ->
 				reject err
-		).done()
+		)
 
 compile = (file, opt, wrap) ->
 	Q.Promise (resolve, reject) ->

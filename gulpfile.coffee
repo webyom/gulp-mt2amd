@@ -3,7 +3,7 @@ gulp = require 'gulp'
 coffee = require 'gulp-coffee'
 postcss = require 'postcss'
 postcssImport = require 'postcss-import'
-autoprefixer = require 'autoprefixer-core'
+autoprefixer = require 'autoprefixer'
 imgCssSprite = require 'gulp-img-css-sprite'
 
 gulp.task 'copy', ->
@@ -40,12 +40,9 @@ gulp.task 'example', ['sprite'], ->
 			cssModuleClassNamePlaceholder: '___module_class_name___'
 			useExternalCssModuleHelper: false
 			postcss: (file, type) ->
-				res = postcss()
-					.use postcssImport()
-					.use autoprefixer browsers: ['last 2 version']
+				postcss([postcssImport(), autoprefixer browsers: ['last 2 version']])
 					.process file.contents.toString(),
 						from: file.path
-				res.css
 		.pipe gulp.dest('example/dest')
 
 gulp.task 'default', ['copy', 'compile']
