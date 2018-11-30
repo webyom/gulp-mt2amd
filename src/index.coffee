@@ -433,14 +433,6 @@ module.exports.compile = (file, opt = {}) ->
 						"  return _$out_;"
 						"}"
 					].join(EOL).replace(/_\$out_ \+= '';/g, '')
-					if not opt.commonjs and not opt.esModule
-						content = "define(function(require, exports, module) {" + EOL + content
-					if opt.esModule
-						content += EOL + "__MT2AMD_ES_MODULE_EXPORT_DEFAULT__+{render: render};"
-					else
-						content += EOL + "exports.render = render;"
-					if not opt.commonjs and not opt.esModule
-						content += EOL + "});"
 					file.contents = new Buffer content
 					file.path = file.path + '.js'
 					Q.Promise((resolve, reject) ->
@@ -451,6 +443,14 @@ module.exports.compile = (file, opt = {}) ->
 					).then(
 						(file) ->
 							content = file.contents.toString()
+							if not opt.commonjs and not opt.esModule
+								content = "define(function(require, exports, module) {" + EOL + content
+							if opt.esModule
+								content += EOL + "__MT2AMD_ES_MODULE_EXPORT_DEFAULT__+{render: render};"
+							else
+								content += EOL + "exports.render = render;"
+							if not opt.commonjs and not opt.esModule
+								content += EOL + "});"
 							content = fixDefineParams content if not opt.commonjs
 							if opt.beautify
 								try
