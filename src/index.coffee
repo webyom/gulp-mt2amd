@@ -255,7 +255,7 @@ compile = (file, opt, wrap) ->
 							else
 								trace = ''
 							content = content.replace '<INC_PROCESS_ASYNC_MARK_' + i + '>', trace + incContent
-						strict = (/(^|[^.])\B\$data\./).test content
+						strict = opt.strictMode or (/(^|[^.])\B\$data\./).test content
 						if opt.trace
 							trace = '<%/* trace:' + path.relative(process.cwd(), file.path) + ' */%>' + EOL
 						else
@@ -408,33 +408,18 @@ module.exports.compile = (file, opt = {}) ->
 				(err) ->
 					reject err
 			).done()
-		else if opt.ngTemplate
-			if opt.trace
-				trace = '/* trace:' + relativePath + ' */' + EOL
-			else
-				trace = ''
-			exportContent = "'" + file.contents.toString().replace(/('|\\)/g, "\\$1").replace(/[\v\t\r\n]/g, "").replace(/\s+/g, " ") + "'"
-			content = [
-				trace + if opt.commonjs or opt.esModule then "" else "define(function(require, exports, module) {"
-				if opt.esModule then "export default " + exportContent + ";" else "module.exports = " + exportContent + ";"
-				if opt.commonjs or opt.esModule then "" else "});"
-			].join EOL
-			file.contents = new Buffer content
-			file.path = originFilePath + '.js'
-			resolve file
 		else
 			compile(file, opt).then(
-				(processed) =>
+				(processed) ->
 					content = [
-						if opt.commonjs or opt.esModule then "" else "define(function(require, exports, module) {"
-						"	function $encodeHtml(str) {"
-						"		return (str + '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\x60/g, '&#96;').replace(/\x27/g, '&#39;').replace(/\x22/g, '&quot;');"
-						"	}"
-						"	function render($data, $opt) {"
-						"		$data = $data || {};"
-						"		var _$out_= '';"
-						"		var $print = function(str) {_$out_ += str;};"
-						"		_$out_ += '" + processed.contents.toString().replace /<\/script>/ig, '</s<%=""%>cript>'
+						"function $encodeHtml(str) {"
+						"  return (str + '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\x60/g, '&#96;').replace(/\x27/g, '&#39;').replace(/\x22/g, '&quot;');"
+						"}"
+						"function render($data, $opt) {"
+						"  $data = $data || {};"
+						"  var _$out_= '';"
+						"  var $print = function(str) {_$out_ += str;};"
+						"  _$out_ += '" + processed.contents.toString().replace /<\/script>/ig, '</s<%=""%>cript>'
 								.replace(/\r\n|\n|\r/g, "\v")
 								.replace(/(?:^|%>).*?(?:<%|$)/g, ($0) ->
 									$0.replace(/('|\\)/g, "\\$1").replace(/[\v\t]/g, "").replace(/\s+/g, " ")
@@ -442,27 +427,43 @@ module.exports.compile = (file, opt = {}) ->
 								.replace(/[\v]/g, EOL)
 								.replace(/<%==(.*?)%>/g, "' + $encodeHtml($1) + '")
 								.replace(/<%=(.*?)%>/g, "' + ($1) + '")
-								.replace(/<%(<-)?/g, "';" + EOL + "		")
-								.replace(/->(\w+)%>/g, EOL + "		$1 += '")
-								.split("%>").join(EOL + "		_$out_ += '") + "';"
-						"		return _$out_;"
-						"	}"
-						if opt.esModule then "__MT2AMD_ES_MODULE_EXPORT_DEFAULT__+{render: render};" else "exports.render = render;"
-						if opt.commonjs or opt.esModule then "" else "});"
+								.replace(/<%(<-)?/g, "';" + EOL + "  ")
+								.replace(/->(\w+)%>/g, EOL + "  $1 += '")
+								.split("%>").join(EOL + "  _$out_ += '") + "';"
+						"  return _$out_;"
+						"}"
 					].join(EOL).replace(/_\$out_ \+= '';/g, '')
-					content = fixDefineParams content if not opt.commonjs
-					if opt.beautify
-						try
-							content = beautify content, opt.beautify
-						catch e
-							console.log 'gulp-mt2amd Error:', e.message
-							console.log 'file:', file.path
-							console.log getErrorStack(content, e.line)
+					if not opt.commonjs and not opt.esModule
+						content = "define(function(require, exports, module) {" + EOL + content
 					if opt.esModule
-						content = content.replace /__MT2AMD_ES_MODULE_EXPORT_DEFAULT__\s*\+\s*/g, 'export default '
+						content += EOL + "__MT2AMD_ES_MODULE_EXPORT_DEFAULT__+{render: render};"
+					else
+						content += EOL + "exports.render = render;"
+					if not opt.commonjs and not opt.esModule
+						content += EOL + "});"
 					file.contents = new Buffer content
 					file.path = file.path + '.js'
-					resolve file
-				(err) =>
-					reject err
+					Q.Promise((resolve, reject) ->
+						if opt.babel
+							opt.babel(file).then(resolve, reject)
+						else
+							resolve file
+					).then(
+						(file) ->
+							content = file.contents.toString()
+							content = fixDefineParams content if not opt.commonjs
+							if opt.beautify
+								try
+									content = beautify content, opt.beautify
+								catch e
+									console.log 'gulp-mt2amd Error:', e.message
+									console.log 'file:', file.path
+									console.log getErrorStack(content, e.line)
+							if opt.esModule
+								content = content.replace /__MT2AMD_ES_MODULE_EXPORT_DEFAULT__\s*\+\s*/g, 'export default '
+							file.contents = new Buffer content
+							resolve file
+						reject
+					)
+				reject
 			).done()
