@@ -10,11 +10,12 @@
       styleTag = head.appendChild(styleTag);
     }
     window._yom_style_module_injected = window._yom_style_module_injected || {};
-    if (!moduleUri) {
+    var injectKey = className || moduleUri;
+    if (!injectKey) {
       styleTag.appendChild(document.createTextNode(cssContent + '\n'));
-    } else if(!window._yom_style_module_injected[moduleUri]) {
-      styleTag.appendChild(document.createTextNode('/* ' + moduleUri + ' */\n' + cssContent + '\n'));
-      window._yom_style_module_injected[moduleUri] = 1;
+    } else if(!window._yom_style_module_injected[injectKey]) {
+      styleTag.appendChild(document.createTextNode('/* ' + injectKey + ' */\n' + cssContent + '\n'));
+      window._yom_style_module_injected[injectKey] = 1;
     }
     function formatClassName(cn) {
       return cn.replace(/^\s*&/, className).replace(/\s+&/g, ' ' + className).replace(/&/g, '')
