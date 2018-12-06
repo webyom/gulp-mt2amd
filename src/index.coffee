@@ -5,6 +5,7 @@ path = require 'path'
 crypto = require 'crypto'
 less = require 'gulp-less'
 sass = require 'gulp-sass'
+marked = require 'marked'
 Vinyl = require 'vinyl'
 chalk = require 'chalk'
 PluginError = require 'plugin-error'
@@ -230,12 +231,14 @@ compile = (file, opt, wrap) ->
 				contents: fs.readFileSync incFilePath
 			if ext is 'tpl.html'
 				asyncList.push compile(incFile, opt, true)
-			if ext is 'less'
+			else if ext is 'less'
 				asyncList.push compileLess(incFile, opt)
-			if ext is 'scss'
+			else if ext is 'scss'
 				asyncList.push compileSass(incFile, opt)
-			if ext is 'css'
+			else if ext is 'css'
 				asyncList.push compileCss(incFile, opt)
+			else
+				return full
 			asyncMark
 		Q.all(asyncList).then(
 			(results) ->
@@ -325,11 +328,30 @@ module.exports.compile = (file, opt = {}) ->
 			else
 				trace = ''
 			try
-				content = JSON.parse(file.contents.toString())
+				content = JSON.parse file.contents.toString()
 			catch e
 				console.log chalk.red 'gulp-mt2amd Error: invalid json file ' + file.path
 				throw e
-			exportContent = JSON.stringify(content, null, 2);
+			exportContent = JSON.stringify content, null, 2
+			content = [
+				trace + if opt.commonjs or opt.esModule then "" else "define(function(require, exports, module) {"
+				if opt.esModule then "export default " + exportContent + ";" else "module.exports = " + exportContent + ";"
+				if opt.commonjs or opt.esModule then "" else "});"
+			].join EOL
+			file.contents = new Buffer content
+			file.path = originFilePath + '.js'
+			resolve file
+		else if extName is '.md'
+			if opt.trace
+				trace = '/* trace:' + relativePath + ' */' + EOL
+			else
+				trace = ''
+			try
+				content = marked file.contents.toString()
+			catch e
+				console.log chalk.red 'gulp-mt2amd Error: invalid md file ' + file.path
+				throw e
+			exportContent = "{content: '" + content.replace(/'/g, "\\'").replace(/[\r\n]/g, '\v').replace(/\s*\v\s*/g, ' ') + "'}"
 			content = [
 				trace + if opt.commonjs or opt.esModule then "" else "define(function(require, exports, module) {"
 				if opt.esModule then "export default " + exportContent + ";" else "module.exports = " + exportContent + ";"

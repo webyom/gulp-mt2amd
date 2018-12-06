@@ -23,7 +23,7 @@ gulp.task 'sprite', ->
 
 gulp.task 'example', ['sprite'], ->
 	mt2amd = require './lib/index'
-	gulp.src(['example/src/**/*.json', 'example/src/**/*.tag', 'example/src/**/*.tpl.html', 'example/src/**/*.css', 'example/src/**/*.less', 'example/src/**/*.scss', 'example/src/**/*.+(png|jpg|jpeg|gif|svg)'])
+	gulp.src(['example/src/**/*.json', 'example/src/**/*.md', 'example/src/**/*.tpl.html', 'example/src/**/*.css', 'example/src/**/*.less', 'example/src/**/*.scss', 'example/src/**/*.+(png|jpg|jpeg|gif|svg)'])
 		.pipe mt2amd
 			generateDataUri: true
 			cssSprite:
