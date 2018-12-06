@@ -347,11 +347,11 @@ module.exports.compile = (file, opt = {}) ->
 			else
 				trace = ''
 			try
-				content = marked file.contents.toString()
+				content = marked file.contents.toString(), opt.markedOptions
 			catch e
 				console.log chalk.red 'gulp-mt2amd Error: invalid md file ' + file.path
 				throw e
-			exportContent = "{content: '" + content.replace(/'/g, "\\'").replace(/[\r\n]/g, '\v').replace(/\s*\v\s*/g, ' ') + "'}"
+			exportContent = "'" + content.replace(/'/g, "\\'").replace(/[\r\n]/g, '\v').replace(/\s*\v\s*/g, ' ') + "'"
 			content = [
 				trace + if opt.commonjs or opt.esModule then "" else "define(function(require, exports, module) {"
 				if opt.esModule then "export default " + exportContent + ";" else "module.exports = " + exportContent + ";"

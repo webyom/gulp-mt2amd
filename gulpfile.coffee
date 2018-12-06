@@ -43,6 +43,9 @@ gulp.task 'example', ['sprite'], ->
 				postcss([postcssImport(), autoprefixer browsers: ['last 2 version']])
 					.process file.contents.toString(),
 						from: file.path
+			markedOptions:
+				smartypants: true
+				langPrefix: 'lang-'
 		.pipe gulp.dest('example/dest')
 
 gulp.task 'default', ['copy', 'compile']
