@@ -441,12 +441,19 @@ module.exports.compile = (file, opt = {}) ->
 						"}"
 						"function render($data, $opt) {"
 						"  $data = $data || {};"
-						"  var _$out_= '';"
+						"  var _$out_= '" + replacedSpace + "';"
 						"  var $print = function(str) {_$out_ += str;};"
 						"  _$out_ += '" + processed.contents.toString().replace /<\/script>/ig, '</s<%=""%>cript>'
 								.replace(/\r\n|\n|\r/g, "\v")
 								.replace(/(?:^|%>).*?(?:<%|$)/g, ($0) ->
-									$0.replace(/('|\\)/g, "\\$1").replace(/[\v\t]/g, "").replace(/\s+/g, replacedSpace)
+									res = $0.replace(/('|\\)/g, "\\$1")
+										.replace(/\t/g, "")
+										.replace(/>\v +/g, ">" + replacedSpace)
+										.replace(/\v +</g, replacedSpace + "<")
+										.replace(/\v+/g, replacedSpace)
+										.replace(/ +/g, " ")
+									res = res.replace(/(^|%>) /, "$1") if not (/(?:^|%>) *(?:<%|$)/.test(res))
+									res
 								)
 								.replace(/[\v]/g, EOL)
 								.replace(/<%==(.*?)%>/g, "' + $encodeHtml($1) + '")
@@ -456,7 +463,7 @@ module.exports.compile = (file, opt = {}) ->
 								.split("%>").join(EOL + "  _$out_ += '") + "';"
 						"  return _$out_;"
 						"}"
-					].join(EOL).replace(/_\$out_ \+= '';/g, '')
+					].join(EOL).replace(/_\$out_ \+= ' *';/g, '')
 					file.contents = new Buffer content
 					file.path = file.path + '.js'
 					Q.Promise((resolve, reject) ->

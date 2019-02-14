@@ -11,7 +11,7 @@ define([ "require", "exports", "module", "jquery" ], function(require, exports, 
         with ($data) {
             /* trace:example/src/index.tpl.html */
             var $ = require("jquery");
-            _$out_ += "<div>Hello</div>";
+            _$out_ += '<div id="a"' + " " + 'class="a" ' + "x" + " " + "y" + " " + "z" + '><p>Hello</p><div class="b"><div id="c" class="c">Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello</div></div></div>';
             (function() {
                 with ($data) {
                     /* trace:example/src/tpl-a.tpl.html */

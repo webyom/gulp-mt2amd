@@ -25,7 +25,7 @@ gulp.task 'example', ['sprite'], ->
 	mt2amd = require './lib/index'
 	gulp.src(['example/src/**/*.json', 'example/src/**/*.md', 'example/src/**/*.tpl.html', 'example/src/**/*.css', 'example/src/**/*.less', 'example/src/**/*.scss', 'example/src/**/*.+(png|jpg|jpeg|gif|svg)'])
 		.pipe mt2amd
-			conservativeCollapse: true
+			conservativeCollapse: false
 			generateDataUri: true
 			cssSprite:
 				base:
