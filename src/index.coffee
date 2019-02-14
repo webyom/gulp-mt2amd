@@ -351,7 +351,8 @@ module.exports.compile = (file, opt = {}) ->
 			catch e
 				console.log chalk.red 'gulp-mt2amd Error: invalid md file ' + file.path
 				throw e
-			exportContent = "'" + content.replace(/'/g, "\\'").replace(/[\r\n]/g, '\v').replace(/\s*\v\s*/g, ' ') + "'"
+			replacedSpace = if opt.conservativeCollapse then ' ' else ''
+			exportContent = "'" + content.replace(/'/g, "\\'").replace(/[\r\n]/g, '\v').replace(/\s*\v\s*/g, replacedSpace) + "'"
 			content = [
 				trace + if opt.commonjs or opt.esModule then "" else "define(function(require, exports, module) {"
 				if opt.esModule then "export default " + exportContent + ";" else "module.exports = " + exportContent + ";"
@@ -433,6 +434,7 @@ module.exports.compile = (file, opt = {}) ->
 		else
 			compile(file, opt).then(
 				(processed) ->
+					replacedSpace = if opt.conservativeCollapse then ' ' else ''
 					content = [
 						"function $encodeHtml(str) {"
 						"  return (str + '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\x60/g, '&#96;').replace(/\x27/g, '&#39;').replace(/\x22/g, '&quot;');"
@@ -444,7 +446,7 @@ module.exports.compile = (file, opt = {}) ->
 						"  _$out_ += '" + processed.contents.toString().replace /<\/script>/ig, '</s<%=""%>cript>'
 								.replace(/\r\n|\n|\r/g, "\v")
 								.replace(/(?:^|%>).*?(?:<%|$)/g, ($0) ->
-									$0.replace(/('|\\)/g, "\\$1").replace(/[\v\t]/g, "").replace(/\s+/g, " ")
+									$0.replace(/('|\\)/g, "\\$1").replace(/[\v\t]/g, "").replace(/\s+/g, replacedSpace)
 								)
 								.replace(/[\v]/g, EOL)
 								.replace(/<%==(.*?)%>/g, "' + $encodeHtml($1) + '")
