@@ -1,23 +1,39 @@
 /* trace:example/src/sprite.css */
 define(function(require, exports, module) {
     (function(global) {
+        var docHead = document.head || document.getElementsByTagName("head")[0];
+        var maxTags = global._yom_max_injected_style_tags || 100;
+        var tagAmount = 0;
+        var injected = {};
+        var reusedTag;
         global.yomCssModuleHelper = global.yomCssModuleHelper || function(className, cssContent, moduleUri) {
-            var head = document.head || document.getElementsByTagName("head")[0];
-            var styleTagId = "yom-style-module-inject-tag";
-            var styleTag = document.getElementById(styleTagId);
-            if (!styleTag) {
-                styleTag = document.createElement("style");
-                styleTag.id = styleTagId;
-                styleTag.type = "text/css";
-                styleTag = head.appendChild(styleTag);
+            var id;
+            if (moduleUri && className) {
+                id = className + "_" + moduleUri;
+            } else if (moduleUri) {
+                id = moduleUri;
+            } else if (className) {
+                id = className;
             }
-            window._yom_style_module_injected = window._yom_style_module_injected || {};
-            var injectKey = className || moduleUri;
-            if (!injectKey) {
+            var styleTag;
+            if (reusedTag) {
+                styleTag = reusedTag;
+            } else {
+                styleTag = document.createElement("style");
+                styleTag.type = "text/css";
+                if (id) {
+                    styleTag.setAttribute("data-id", id);
+                }
+                styleTag = docHead.appendChild(styleTag);
+                if (++tagAmount >= maxTags) {
+                    reusedTag = styleTag;
+                }
+            }
+            if (!id) {
                 styleTag.appendChild(document.createTextNode(cssContent + "\n"));
-            } else if (!window._yom_style_module_injected[injectKey]) {
-                styleTag.appendChild(document.createTextNode("/* " + injectKey + " */\n" + cssContent + "\n"));
-                window._yom_style_module_injected[injectKey] = 1;
+            } else if (!injected[id]) {
+                styleTag.appendChild(document.createTextNode("/* " + id + " */\n" + cssContent + "\n"));
+                injected[id] = 1;
             }
             function formatClassName(cn) {
                 return cn.replace(/^\s*&/, className).replace(/\s+&/g, " " + className).replace(/&/g, "");
