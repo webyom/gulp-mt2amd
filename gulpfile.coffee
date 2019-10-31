@@ -41,9 +41,12 @@ gulp.task 'example', ['sprite'], ->
 			cssModuleClassNamePlaceholder: '___module_class_name___'
 			useExternalCssModuleHelper: false
 			postcss: (file, type) ->
-				postcss([postcssImport(), autoprefixer browsers: ['last 2 version']])
+				postcss([postcssImport(), autoprefixer()])
 					.process file.contents.toString(),
 						from: file.path
+					.then (res) ->
+						file.contents = Buffer.from res.css
+						file
 			markedOptions:
 				smartypants: true
 				langPrefix: 'lang-'

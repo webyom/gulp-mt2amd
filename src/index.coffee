@@ -124,7 +124,9 @@ compileLess = (file, opt) ->
 			(file, enc, next) ->
 				Q.Promise((resolve, reject) ->
 					if opt.postcss
-						opt.postcss(file, 'less').then resolve, reject
+						opt.postcss(file, 'less').then (file) ->
+							resolve css: file.contents.toString()
+						, reject
 					else
 						resolve({css: file.contents.toString()})
 				).then(
@@ -135,7 +137,7 @@ compileLess = (file, opt) ->
 								cssBase64img(content, file.path, opt)
 						).then(
 							(content) ->
-								file.contents = new Buffer content
+								file.contents = Buffer.from content
 								minifier.minify file, minifyCSS: true
 								resolve file
 							(err) ->
@@ -162,7 +164,9 @@ compileSass = (file, opt) ->
 		sassStream.on 'data', (file) ->
 			Q.Promise((resolve, reject) ->
 				if opt.postcss
-					opt.postcss(file, 'scss').then resolve, reject
+					opt.postcss(file, 'scss').then (file) ->
+						resolve css: file.contents.toString()
+					, reject
 				else
 					resolve({css: file.contents.toString()})
 			).then(
@@ -173,7 +177,7 @@ compileSass = (file, opt) ->
 							cssBase64img(content, file.path, opt)
 					).then(
 						(content) ->
-							file.contents = new Buffer content
+							file.contents = Buffer.from content
 							minifier.minify file, minifyCSS: true
 							resolve file
 						(err) ->
@@ -196,7 +200,9 @@ compileCss = (file, opt) ->
 		file._originalPath = file.path
 		Q.Promise((resolve, reject) ->
 			if opt.postcss
-				opt.postcss(file, 'css').then resolve, reject
+				opt.postcss(file, 'css').then (file) ->
+					resolve css: file.contents.toString()
+				, reject
 			else
 				resolve({css: file.contents.toString()})
 		).then(
@@ -207,7 +213,7 @@ compileCss = (file, opt) ->
 						cssBase64img(content, file.path, opt)
 				).then(
 					(content) ->
-						file.contents = new Buffer content
+						file.contents = Buffer.from content
 						minifier.minify file, minifyCSS: true
 						resolve file
 					(err) ->
@@ -272,7 +278,7 @@ compile = (file, opt, wrap) ->
 						if wrap
 							content.unshift '<%;(function() {%>'
 							content.push '<%})();%>'
-						file.contents = new Buffer content.join EOL
+						file.contents = Buffer.from content.join EOL
 						resolve file
 					(err) ->
 						reject err
@@ -338,7 +344,7 @@ module.exports.compile = (file, opt = {}) ->
 				if opt.esModule then "export default " + exportContent + ";" else "module.exports = " + exportContent + ";"
 				if opt.commonjs or opt.esModule then "" else "});"
 			].join EOL
-			file.contents = new Buffer content
+			file.contents = Buffer.from content
 			file.path = originFilePath + '.js'
 			resolve file
 		else if extName is '.md'
@@ -358,7 +364,7 @@ module.exports.compile = (file, opt = {}) ->
 				if opt.esModule then "export default " + exportContent + ";" else "module.exports = " + exportContent + ";"
 				if opt.commonjs or opt.esModule then "" else "});"
 			].join EOL
-			file.contents = new Buffer content
+			file.contents = Buffer.from content
 			file.path = originFilePath + '.js'
 			resolve file
 		else if extName in ['.png', '.jpg', '.jpeg', '.gif', '.svg']
@@ -372,7 +378,7 @@ module.exports.compile = (file, opt = {}) ->
 				if opt.esModule then "export default " + exportContent + ";" else "module.exports = " + exportContent + ";"
 				if opt.commonjs or opt.esModule then "" else "});"
 			].join EOL
-			file.contents = new Buffer content
+			file.contents = Buffer.from content
 			file.path = originFilePath + '.js'
 			resolve file
 		else if extName in ['.less', '.scss', '.css']
@@ -395,7 +401,7 @@ module.exports.compile = (file, opt = {}) ->
 							if opt.esModule then "export default '" + cssContent + "';" else "module.exports = '" + cssContent + "';"
 							if opt.commonjs or opt.esModule then "" else "});"
 						].join EOL
-						file.contents = new Buffer content
+						file.contents = Buffer.from content
 						file.path = originFilePath + '.js'
 						resolve file
 						return
@@ -425,7 +431,7 @@ module.exports.compile = (file, opt = {}) ->
 							console.log getErrorStack(content, e.line)
 					if opt.esModule
 						content = content.replace /__MT2AMD_ES_MODULE_EXPORT_DEFAULT__\s*\+\s*/g, 'export default '
-					file.contents = new Buffer content
+					file.contents = Buffer.from content
 					file.path = originFilePath + '.js'
 					resolve file
 				(err) ->
@@ -464,7 +470,7 @@ module.exports.compile = (file, opt = {}) ->
 						"  return _$out_;"
 						"}"
 					].join(EOL).replace(/_\$out_ \+= ' *';/g, '')
-					file.contents = new Buffer content
+					file.contents = Buffer.from content
 					file.path = file.path + '.js'
 					Q.Promise((resolve, reject) ->
 						if opt.babel
@@ -492,7 +498,7 @@ module.exports.compile = (file, opt = {}) ->
 									console.log getErrorStack(content, e.line)
 							if opt.esModule
 								content = content.replace /__MT2AMD_ES_MODULE_EXPORT_DEFAULT__\s*\+\s*/g, 'export default '
-							file.contents = new Buffer content
+							file.contents = Buffer.from content
 							resolve file
 						reject
 					)
