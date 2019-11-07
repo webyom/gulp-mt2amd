@@ -441,7 +441,14 @@ module.exports.compile = (file, opt = {}) ->
 			compile(file, opt).then(
 				(processed) ->
 					replacedSpace = if opt.conservativeCollapse then ' ' else ''
+					if opt.dataInjection
+						dataInjection = [
+							"function $injectData(name, data) {"
+							"  return '<script>" + (if typeof opt.dataInjection is 'string' then opt.dataInjection else 'window.') + "' + name + ' = ' + JSON.stringify(data) + ';</s' + 'cript>';"
+							"}"
+						].join EOL
 					content = [
+						dataInjection || ""
 						"function $encodeHtml(str) {"
 						"  return (str + '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\x60/g, '&#96;').replace(/\x27/g, '&#39;').replace(/\x22/g, '&quot;');"
 						"}"
