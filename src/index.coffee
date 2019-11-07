@@ -444,7 +444,7 @@ module.exports.compile = (file, opt = {}) ->
 					if opt.dataInjection
 						dataInjection = [
 							"function $injectData(name, data) {"
-							"  return '<script>" + (if typeof opt.dataInjection is 'string' then opt.dataInjection else 'window.') + "' + name + ' = ' + JSON.stringify(data) + ';</s' + 'cript>';"
+							"  return '<script>" + (if typeof opt.dataInjection is 'string' then opt.dataInjection else 'window') + ".' + name + ' = ' + JSON.stringify(data) + ';</s' + 'cript>';"
 							"}"
 						].join EOL
 					content = [
