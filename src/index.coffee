@@ -444,7 +444,7 @@ module.exports.compile = (file, opt = {}) ->
 					if opt.dataInjection
 						dataInjection = [
 							"function $injectData(name, data) {"
-							"  return '<script>" + (if typeof opt.dataInjection is 'string' then opt.dataInjection else 'window') + ".' + name + ' = ' + JSON.stringify(data) + ';</s' + 'cript>';"
+							"  return '<script>" + (if typeof opt.dataInjection is 'string' then opt.dataInjection else 'window') + "[\"' + name + '\"] = ' + JSON.stringify(data) + ';</s' + 'cript>';"
 							"}"
 						].join EOL
 					content = [
@@ -469,8 +469,8 @@ module.exports.compile = (file, opt = {}) ->
 									res
 								)
 								.replace(/[\v]/g, EOL)
-								.replace(/<%==(.*?)%>/g, "' + $encodeHtml($1) + '")
-								.replace(/<%=(.*?)%>/g, "' + ($1) + '")
+								.replace(/<%==([\s\S]*?)%>/mg, "' + $encodeHtml($1) + '")
+								.replace(/<%=([\s\S]*?)%>/mg, "' + ($1) + '")
 								.replace(/<%(<-)?/g, "';" + EOL + "  ")
 								.replace(/->(\w+)%>/g, EOL + "  $1 += '")
 								.split("%>").join(EOL + "  _$out_ += '") + "';"
