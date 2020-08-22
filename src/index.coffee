@@ -442,9 +442,19 @@ module.exports.compile = (file, opt = {}) ->
 				(processed) ->
 					replacedSpace = if opt.conservativeCollapse then ' ' else ''
 					if opt.dataInjection
+						injectionObj = if typeof opt.dataInjection is 'string' then opt.dataInjection else 'window'
 						dataInjection = [
 							"function $injectData(name, data) {"
-							"  return '<script>" + (if typeof opt.dataInjection is 'string' then opt.dataInjection else 'window') + "[\"' + name + '\"] = ' + JSON.stringify(data) + ';</s' + 'cript>';"
+							"  if (typeof data === 'undefined') {"
+							"    var res = [];"
+							"    for (var p in name) {"
+							"      if (Object.prototype.hasOwnProperty.call(name, p)) {"
+							"        res.push('<script>" + injectionObj + "[\"' + p + '\"] = ' + JSON.stringify(name[p]) + ';</s' + 'cript>');"
+							"      }"
+							"    }"
+							"    return res.join('\\n');"
+							"  }"
+							"  return '<script>" + injectionObj + "[\"' + name + '\"] = ' + JSON.stringify(data) + ';</s' + 'cript>';"
 							"}"
 						].join EOL
 					content = [
